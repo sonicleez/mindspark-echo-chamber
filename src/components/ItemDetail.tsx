@@ -3,7 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Item } from './ItemCard';
 import { Button } from '@/components/ui/button';
-import { Calendar, ExternalLink, Tag, X } from 'lucide-react';
+import { Calendar, ExternalLink, Tag, Trash, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 
@@ -11,9 +11,10 @@ interface ItemDetailProps {
   item: Item | null;
   isOpen: boolean;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
-const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose }) => {
+const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete }) => {
   if (!item) return null;
 
   return (
@@ -80,6 +81,20 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose }) => {
             </div>
           )}
         </div>
+        
+        {onDelete && (
+          <div className="mt-6 flex justify-end">
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={onDelete}
+              className="flex items-center gap-1"
+            >
+              <Trash className="h-4 w-4" />
+              Delete Item
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

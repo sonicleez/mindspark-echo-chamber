@@ -8,69 +8,45 @@ import Filters, { FilterType } from '@/components/Filters';
 import { Item } from '@/components/ItemCard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
-
-// Sample data
-const sampleItems: Item[] = [
-  {
-    id: '1',
-    title: 'The Art of Minimalist Design',
-    description: 'Exploring the principles of minimalist design in modern web applications.',
-    imageUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',
-    url: 'https://example.com/minimalist-design',
-    tags: ['design', 'minimalism', 'web'],
-    dateAdded: new Date('2025-05-10'),
-  },
-  {
-    id: '2',
-    title: 'Productivity Tools for Designers',
-    description: 'A collection of the best tools to boost your design workflow.',
-    imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80',
-    url: 'https://example.com/productivity-tools',
-    tags: ['productivity', 'tools', 'design'],
-    dateAdded: new Date('2025-05-08'),
-  },
-  {
-    id: '3',
-    title: 'Color Theory Basics',
-    url: 'https://example.com/color-theory',
-    tags: ['design', 'color'],
-    dateAdded: new Date('2025-05-05'),
-  },
-  {
-    id: '4',
-    title: 'Typography in UI Design',
-    description: 'How to choose the right fonts for your user interfaces.',
-    imageUrl: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=800&q=80',
-    tags: ['typography', 'ui', 'design'],
-    dateAdded: new Date('2025-05-03'),
-  },
-  {
-    id: '5',
-    title: 'My project notes',
-    description: 'Ideas and sketches for the upcoming client project.',
-    tags: ['notes', 'project', 'ideas'],
-    dateAdded: new Date('2025-05-01'),
-  },
-  {
-    id: '6',
-    title: 'User Experience Research Methods',
-    description: 'A comprehensive guide to UX research methods and when to use them.',
-    imageUrl: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=800&q=80',
-    url: 'https://example.com/ux-research-methods',
-    tags: ['ux', 'research', 'design'],
-    dateAdded: new Date('2025-04-29'),
-  },
-];
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getItems, addItem, deleteItem } from '@/services/itemsService';
 
 const Index: React.FC = () => {
-  const [items, setItems] = useState<Item[]>(sampleItems);
-  const [filteredItems, setFilteredItems] = useState<Item[]>(sampleItems);
+  const queryClient = useQueryClient();
+  
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ['items'],
+    queryFn: getItems,
+  });
+  
+  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentFilter, setCurrentFilter] = useState<FilterType>('all');
+
+  const addItemMutation = useMutation({
+    mutationFn: addItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Item added successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to add item: ${error.message}`);
+    }
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: deleteItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Item deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete item: ${error.message}`);
+    }
+  });
 
   // Apply filters when items, searchQuery, or currentFilter changes
   useEffect(() => {
@@ -124,14 +100,15 @@ const Index: React.FC = () => {
   };
 
   const handleCreateItem = (newItemData: Omit<Item, 'id' | 'dateAdded'>) => {
-    const newItem: Item = {
-      ...newItemData,
-      id: uuidv4(),
-      dateAdded: new Date(),
-    };
-    
-    setItems(prevItems => [newItem, ...prevItems]);
-    toast.success('Item added successfully');
+    addItemMutation.mutate(newItemData);
+    setIsAddDialogOpen(false);
+  };
+  
+  const handleDeleteItem = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      deleteItemMutation.mutate(id);
+      setIsDetailOpen(false);
+    }
   };
 
   return (
@@ -143,7 +120,11 @@ const Index: React.FC = () => {
           <Filters currentFilter={currentFilter} onFilterChange={handleFilterChange} />
         </div>
         
-        {filteredItems.length > 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mind-accent"></div>
+          </div>
+        ) : filteredItems.length > 0 ? (
           <ItemGrid items={filteredItems} onItemClick={handleItemClick} />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-mind-text-secondary">
@@ -163,6 +144,7 @@ const Index: React.FC = () => {
         item={selectedItem} 
         isOpen={isDetailOpen} 
         onClose={() => setIsDetailOpen(false)} 
+        onDelete={selectedItem ? () => handleDeleteItem(selectedItem.id) : undefined}
       />
       
       <AddItemDialog 

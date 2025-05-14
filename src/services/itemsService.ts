@@ -1,0 +1,57 @@
+
+import { supabase } from '@/integrations/supabase/client';
+import { Item } from '@/components/ItemCard';
+
+export async function getItems(): Promise<Item[]> {
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  
+  return data.map(item => ({
+    id: item.id,
+    title: item.title,
+    description: item.description || undefined,
+    imageUrl: item.image_url || undefined,
+    url: item.url || undefined,
+    tags: item.tags || [],
+    dateAdded: new Date(item.created_at)
+  }));
+}
+
+export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Item> {
+  const { data, error } = await supabase
+    .from('items')
+    .insert({
+      title: item.title,
+      description: item.description,
+      image_url: item.imageUrl,
+      url: item.url,
+      tags: item.tags || []
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description || undefined,
+    imageUrl: data.image_url || undefined,
+    url: data.url || undefined,
+    tags: data.tags || [],
+    dateAdded: new Date(data.created_at)
+  };
+}
+
+export async function deleteItem(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('items')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}

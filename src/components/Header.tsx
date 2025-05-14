@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookmarkPlus, Search } from "lucide-react";
+import UserMenu from './UserMenu';
 
 interface HeaderProps {
   onAddItem: () => void;
@@ -33,14 +34,17 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
           </div>
         </div>
         
-        <Button 
-          onClick={onAddItem}
-          variant="ghost" 
-          className="p-2 hover:bg-accent hover:text-accent-foreground"
-        >
-          <BookmarkPlus className="h-5 w-5" />
-          <span className="ml-2 hidden sm:inline">Add New</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={onAddItem}
+            variant="ghost" 
+            className="p-2 hover:bg-accent hover:text-accent-foreground"
+          >
+            <BookmarkPlus className="h-5 w-5" />
+            <span className="ml-2 hidden sm:inline">Add New</span>
+          </Button>
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

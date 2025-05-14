@@ -21,8 +21,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
   const [imageUrl, setImageUrl] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!title) {
@@ -30,16 +31,23 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
       return;
     }
     
-    const newItem: Omit<Item, 'id' | 'dateAdded'> = {
-      title,
-      url: url || undefined,
-      imageUrl: imageUrl || undefined,
-      description: description || undefined,
-      tags: tags ? tags.split(',').map(tag => tag.trim()) : undefined,
-    };
+    setIsSubmitting(true);
     
-    onAddItem(newItem);
-    handleClose();
+    try {
+      const newItem: Omit<Item, 'id' | 'dateAdded'> = {
+        title,
+        url: url || undefined,
+        imageUrl: imageUrl || undefined,
+        description: description || undefined,
+        tags: tags ? tags.split(',').map(tag => tag.trim()) : undefined,
+      };
+      
+      await onAddItem(newItem);
+      handleClose();
+    } catch (error) {
+      console.error('Error adding item:', error);
+      setIsSubmitting(false);
+    }
   };
   
   const handleClose = () => {
@@ -48,6 +56,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
     setImageUrl('');
     setDescription('');
     setTags('');
+    setIsSubmitting(false);
     onClose();
   };
 
@@ -72,6 +81,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter a title"
               required
+              disabled={isSubmitting}
             />
           </div>
           
@@ -83,6 +93,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
+              disabled={isSubmitting}
             />
           </div>
           
@@ -94,6 +105,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://example.com/image.jpg"
+              disabled={isSubmitting}
             />
           </div>
           
@@ -105,6 +117,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add a description"
               rows={3}
+              disabled={isSubmitting}
             />
           </div>
           
@@ -115,12 +128,17 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="design, inspiration, article"
+              disabled={isSubmitting}
             />
           </div>
           
           <div className="flex justify-end pt-4">
-            <Button type="submit" className="bg-mind-accent hover:bg-mind-accent-hover text-white">
-              Add Item
+            <Button 
+              type="submit" 
+              className="bg-mind-accent hover:bg-mind-accent-hover text-white"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Adding...' : 'Add Item'}
             </Button>
           </div>
         </form>
