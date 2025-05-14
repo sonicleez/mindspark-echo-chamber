@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Item } from './ItemCard';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EditItemDialogProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExtractingMetadata, setIsExtractingMetadata] = useState(false);
 
   useEffect(() => {
     if (item) {
@@ -33,6 +35,47 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
       setTags(item.tags ? item.tags.join(', ') : '');
     }
   }, [item]);
+
+  const extractMetadata = async () => {
+    if (!url) {
+      toast.error('Please enter a URL');
+      return;
+    }
+
+    setIsExtractingMetadata(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-metadata', {
+        body: { url }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.title) {
+        setTitle(data.title);
+      }
+
+      if (data.description) {
+        setDescription(data.description);
+      }
+
+      if (data.imageUrl) {
+        setImageUrl(data.imageUrl);
+      }
+
+      if (data.tags && data.tags.length > 0) {
+        setTags(data.tags.join(', '));
+      }
+
+      toast.success('Metadata extracted successfully');
+    } catch (error) {
+      console.error('Error extracting metadata:', error);
+      toast.error('Failed to extract metadata');
+    } finally {
+      setIsExtractingMetadata(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +125,32 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
         {item && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="url">URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="url"
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  disabled={isSubmitting}
+                  className="flex-1"
+                />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={extractMetadata}
+                  disabled={!url || isExtractingMetadata || isSubmitting}
+                  className="shrink-0"
+                >
+                  {isExtractingMetadata ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : 'Extract'}
+                </Button>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
@@ -89,18 +158,6 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter a title"
                 required
-                disabled={isSubmitting}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="url">URL</Label>
-              <Input
-                id="url"
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
                 disabled={isSubmitting}
               />
             </div>
@@ -115,6 +172,18 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
                 placeholder="https://example.com/image.jpg"
                 disabled={isSubmitting}
               />
+              {imageUrl && (
+                <div className="mt-2 border rounded-md p-2 flex justify-center">
+                  <img 
+                    src={imageUrl} 
+                    alt="Preview" 
+                    className="max-h-40 object-contain" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder.svg';
+                    }}
+                  />
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
