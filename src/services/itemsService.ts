@@ -22,6 +22,13 @@ export async function getItems(): Promise<Item[]> {
 }
 
 export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Item> {
+  // Get the current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('You must be logged in to add items');
+  }
+  
   const { data, error } = await supabase
     .from('items')
     .insert({
@@ -29,7 +36,8 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
       description: item.description,
       image_url: item.imageUrl,
       url: item.url,
-      tags: item.tags || []
+      tags: item.tags || [],
+      user_id: user.id // Add the user_id field
     })
     .select()
     .single();
