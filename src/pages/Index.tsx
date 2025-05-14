@@ -6,6 +6,7 @@ import ItemDetail from '@/components/ItemDetail';
 import AddItemDialog from '@/components/AddItemDialog';
 import Filters, { FilterType } from '@/components/Filters';
 import { Item } from '@/components/ItemCard';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
