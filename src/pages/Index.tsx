@@ -4,12 +4,13 @@ import Header from '@/components/Header';
 import ItemGrid from '@/components/ItemGrid';
 import ItemDetail from '@/components/ItemDetail';
 import AddItemDialog from '@/components/AddItemDialog';
+import EditItemDialog from '@/components/EditItemDialog';
 import Filters, { FilterType } from '@/components/Filters';
 import { Item } from '@/components/ItemCard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getItems, addItem, deleteItem } from '@/services/itemsService';
+import { getItems, addItem, deleteItem, updateItem } from '@/services/itemsService';
 
 const Index: React.FC = () => {
   const queryClient = useQueryClient();
@@ -23,6 +24,7 @@ const Index: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentFilter, setCurrentFilter] = useState<FilterType>('all');
 
@@ -34,6 +36,18 @@ const Index: React.FC = () => {
     },
     onError: (error: Error) => {
       toast.error(`Failed to add item: ${error.message}`);
+    }
+  });
+
+  const updateItemMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Item, 'id' | 'dateAdded'>> }) => 
+      updateItem(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Item updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update item: ${error.message}`);
     }
   });
 
@@ -91,6 +105,11 @@ const Index: React.FC = () => {
     setIsAddDialogOpen(true);
   };
 
+  const handleEditItem = () => {
+    setIsDetailOpen(false);
+    setIsEditDialogOpen(true);
+  };
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
@@ -102,6 +121,11 @@ const Index: React.FC = () => {
   const handleCreateItem = (newItemData: Omit<Item, 'id' | 'dateAdded'>) => {
     addItemMutation.mutate(newItemData);
     setIsAddDialogOpen(false);
+  };
+  
+  const handleUpdateItem = (id: string, updatedData: Partial<Omit<Item, 'id' | 'dateAdded'>>) => {
+    updateItemMutation.mutate({ id, data: updatedData });
+    setIsEditDialogOpen(false);
   };
   
   const handleDeleteItem = (id: string) => {
@@ -145,12 +169,20 @@ const Index: React.FC = () => {
         isOpen={isDetailOpen} 
         onClose={() => setIsDetailOpen(false)} 
         onDelete={selectedItem ? () => handleDeleteItem(selectedItem.id) : undefined}
+        onEdit={selectedItem ? handleEditItem : undefined}
       />
       
       <AddItemDialog 
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onAddItem={handleCreateItem}
+      />
+
+      <EditItemDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        onEditItem={handleUpdateItem}
+        item={selectedItem}
       />
     </div>
   );

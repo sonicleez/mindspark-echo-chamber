@@ -55,6 +55,35 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
   };
 }
 
+export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'dateAdded'>>): Promise<Item> {
+  const updates: Record<string, any> = {};
+  
+  if (item.title !== undefined) updates.title = item.title;
+  if (item.description !== undefined) updates.description = item.description;
+  if (item.imageUrl !== undefined) updates.image_url = item.imageUrl;
+  if (item.url !== undefined) updates.url = item.url;
+  if (item.tags !== undefined) updates.tags = item.tags;
+  
+  const { data, error } = await supabase
+    .from('items')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description || undefined,
+    imageUrl: data.image_url || undefined,
+    url: data.url || undefined,
+    tags: data.tags || [],
+    dateAdded: new Date(data.created_at)
+  };
+}
+
 export async function deleteItem(id: string): Promise<void> {
   const { error } = await supabase
     .from('items')

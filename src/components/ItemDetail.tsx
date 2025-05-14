@@ -3,7 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Item } from './ItemCard';
 import { Button } from '@/components/ui/button';
-import { Calendar, ExternalLink, Tag, Trash, X } from 'lucide-react';
+import { Calendar, ExternalLink, PencilLine, Tag, Trash, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 
@@ -12,9 +12,10 @@ interface ItemDetailProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete?: () => void;
+  onEdit?: () => void;
 }
 
-const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete }) => {
+const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete, onEdit }) => {
   if (!item) return null;
 
   return (
@@ -82,8 +83,20 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
           )}
         </div>
         
-        {onDelete && (
-          <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex justify-end gap-2">
+          {onEdit && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onEdit}
+              className="flex items-center gap-1"
+            >
+              <PencilLine className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          
+          {onDelete && (
             <Button 
               variant="destructive" 
               size="sm" 
@@ -91,10 +104,10 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
               className="flex items-center gap-1"
             >
               <Trash className="h-4 w-4" />
-              Delete Item
+              Delete
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
