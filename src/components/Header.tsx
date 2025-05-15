@@ -14,7 +14,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   const [searchFocused, setSearchFocused] = useState(false);
   
-  // Use the new animation file URL 
+  // Use the animation file URL 
   const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747292766881_Addnew1.riv';
   
   // Use Rive with state machine for interactivity
@@ -22,9 +22,10 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
     src: riveAnimationUrl,
     stateMachines: 'State Machine 1',
     autoplay: true,
+    artboard: 'New Artboard',
   });
 
-  // Create state machine inputs for hover and click interactions if they exist
+  // Create state machine inputs for hover and click interactions
   const hoverInput = useStateMachineInput(rive, 'State Machine 1', 'hover');
   const pressInput = useStateMachineInput(rive, 'State Machine 1', 'pressed');
 
@@ -93,31 +94,29 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         
         <div className="flex items-center gap-3">
           <div 
-            className="rive-button-container flex items-center cursor-pointer"
+            className="cursor-pointer"
             onClick={handleAddButtonClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             style={{ 
+              width: '110px', 
               height: '40px', 
-              minWidth: '110px',
-              position: 'relative' 
+              position: 'relative'
             }}
           >
             <RiveComponent 
-              className="w-full h-full"
               style={{ 
                 position: 'absolute',
                 top: '0',
                 left: '0',
                 width: '100%',
                 height: '100%'
-              }} 
+              }}
             />
             <span 
-              className="text-white font-medium hidden sm:block z-10 pl-10 pr-2"
-              style={{ position: 'relative' }}
+              className="absolute inset-0 flex items-center justify-center text-white font-medium z-10 hidden sm:flex"
             >
               Add New
             </span>
