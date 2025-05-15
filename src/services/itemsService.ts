@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
 
@@ -15,6 +16,7 @@ export async function getItems(space_id?: string): Promise<Item[]> {
   const { data, error } = await query;
   
   if (error) throw error;
+  if (!data) return [];
   
   return data.map(item => ({
     id: item.id,
@@ -156,7 +158,7 @@ export async function summarizeContent(content: string): Promise<string> {
       throw error;
     }
 
-    return data.summary || '';
+    return data?.summary || '';
   } catch (error) {
     console.error('Error summarizing content:', error);
     throw error;

@@ -10,12 +10,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Item } from '@/components/ItemCard'; // Import Item from ItemCard instead
 import { Space } from '@/services/spacesService'; // Import Space from spacesService
-import { addItem as createItem, updateItem, deleteItem, getItems } from '@/services/itemsService'; // Rename addItem to createItem for local usage
+import { addItem, updateItem, deleteItem, getItems } from '@/services/itemsService'; // Use consistent naming
 import { createSpace, getSpaces } from '@/services/spacesService';
 import ItemDetail from '@/components/ItemDetail';
 import { toast } from 'sonner';
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
+
+interface FilterType {
+  types: string[];
+  tags: string[];
+  dateRange: { from: Date | null; to: Date | null };
+}
 
 const Index = () => {
   const { user } = useAuth();
@@ -29,11 +35,7 @@ const Index = () => {
   const [detailItem, setDetailItem] = useState<Item | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<{
-    types: string[];
-    tags: string[];
-    dateRange: { from: Date | null; to: Date | null };
-  }>({
+  const [activeFilters, setActiveFilters] = useState<FilterType>({
     types: [],
     tags: [],
     dateRange: { from: null, to: null }
@@ -78,7 +80,13 @@ const Index = () => {
   };
 
   const filterItems = () => {
-    let filtered = items;
+    // Ensure items is defined before filtering
+    if (!items) {
+      setFilteredItems([]);
+      return;
+    }
+    
+    let filtered = [...items];
     
     // Filter by space
     if (selectedSpace) {
@@ -92,13 +100,13 @@ const Index = () => {
         item.title?.toLowerCase().includes(query) || 
         item.description?.toLowerCase().includes(query) ||
         item.url?.toLowerCase().includes(query) ||
-        item.tags?.some(tag => tag.toLowerCase().includes(query))
+        (item.tags && item.tags.some(tag => tag.toLowerCase().includes(query)))
       );
     }
     
     // Filter by type
     if (activeFilters.types.length > 0) {
-      filtered = filtered.filter(item => activeFilters.types.includes(item.type));
+      filtered = filtered.filter(item => item.type && activeFilters.types.includes(item.type));
     }
     
     // Filter by tags
@@ -111,7 +119,7 @@ const Index = () => {
     // Filter by date range
     if (activeFilters.dateRange.from || activeFilters.dateRange.to) {
       filtered = filtered.filter(item => {
-        const itemDate = new Date(item.created_at);
+        const itemDate = new Date(item.dateAdded);
         
         if (activeFilters.dateRange.from && activeFilters.dateRange.to) {
           return itemDate >= activeFilters.dateRange.from && itemDate <= activeFilters.dateRange.to;
@@ -135,8 +143,13 @@ const Index = () => {
         newItem.space_id = selectedSpace.id;
       }
       
-      const createdItem = await createItem(newItem);
-      setItems(prevItems => [...prevItems, createdItem]);
+      // Ensure the required title property is present
+      if (!newItem.title) {
+        newItem.title = "Untitled";
+      }
+      
+      const createdItem = await addItem(newItem as Omit<Item, 'id' | 'dateAdded'>);
+      setItems(prevItems => [...(prevItems || []), createdItem]);
       toast.success('Item added successfully');
       setIsAddDialogOpen(false);
     } catch (error) {
@@ -219,11 +232,7 @@ const Index = () => {
     setIsFiltersOpen(!isFiltersOpen);
   };
 
-  const handleFilterChange = (filters: {
-    types: string[];
-    tags: string[];
-    dateRange: { from: Date | null; to: Date | null };
-  }) => {
+  const handleFilterChange = (filters: FilterType) => {
     setActiveFilters(filters);
   };
 
@@ -239,7 +248,7 @@ const Index = () => {
         <div className="flex pt-16 h-full">
           {isFiltersOpen && (
             <div className="w-64 p-4 border-r border-[#333] overflow-auto">
-              <Filters onFilterChange={handleFilterChange} items={items} />
+              <Filters onFilterChange={handleFilterChange} items={items || []} />
             </div>
           )}
           
@@ -247,7 +256,6 @@ const Index = () => {
             <div className="flex items-center justify-between mb-4">
               <SpaceSelector
                 spaces={spaces}
-                selectedSpace={selectedSpace}
                 onSelectSpace={setSelectedSpace}
                 onAddSpace={handleAddSpace}
               />
@@ -258,10 +266,8 @@ const Index = () => {
             
             <div className="flex-1 overflow-auto">
               <ItemGrid 
-                items={filteredItems}
+                items={filteredItems || []}
                 onItemClick={handleItemClick}
-                onEditItem={handleEditButtonClick}
-                onDeleteItem={handleDeleteItem}
               />
             </div>
           </div>
@@ -269,7 +275,8 @@ const Index = () => {
           {detailItem && (
             <div className="w-1/3 border-l border-[#333] overflow-auto">
               <ItemDetail 
-                item={detailItem} 
+                item={detailItem}
+                isOpen={Boolean(detailItem)}
                 onClose={() => setDetailItem(null)}
                 onEdit={() => {
                   setSelectedItem(detailItem);
@@ -283,13 +290,13 @@ const Index = () => {
       </div>
       
       <AddItemDialog 
-        open={isAddDialogOpen} 
+        isOpen={isAddDialogOpen} 
         onClose={() => setIsAddDialogOpen(false)}
         onAddItem={handleAddItem}
       />
       
       <EditItemDialog
-        open={isEditDialogOpen}
+        isOpen={isEditDialogOpen}
         onClose={() => {
           setIsEditDialogOpen(false);
           setSelectedItem(null);

@@ -1,36 +1,38 @@
 
 import React from 'react';
-import Rive from '@rive-app/react-canvas';
+import { useRiveAnimation } from '@rive-app/react-canvas';
 
 interface RiveAnimationProps {
   src: string;
   artboard?: string;
   animations?: string | string[];
   stateMachines?: string | string[];
-  className?: string;
   autoplay?: boolean;
-  fit?: 'cover' | 'contain' | 'fill' | 'fitWidth' | 'fitHeight' | 'none' | 'scale-down';
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-const RiveAnimation: React.FC<RiveAnimationProps> = ({ 
-  src, 
-  artboard, 
-  animations, 
+const RiveAnimation: React.FC<RiveAnimationProps> = ({
+  src,
+  artboard,
+  animations,
   stateMachines,
-  className,
   autoplay = true,
-  fit = 'contain'
+  className = '',
+  style,
 }) => {
+  const { RiveComponent, rive } = useRiveAnimation({
+    src,
+    artboard,
+    animations,
+    stateMachines,
+    autoplay,
+  });
+
   return (
-    <Rive 
-      src={src}
-      artboard={artboard}
-      animations={animations}
-      stateMachines={stateMachines}
-      className={className}
-      autoplay={autoplay}
-      fit={fit}
-    />
+    <div className={className} style={style}>
+      <RiveComponent />
+    </div>
   );
 };
 
