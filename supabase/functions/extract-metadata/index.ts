@@ -45,7 +45,17 @@ serve(async (req) => {
     const metadata = extractMetadata(html, url);
     
     // Now request a summary from the summarize-content function
-    const summaryResponse = await fetch(`${req.url.split('/extract-metadata')[0]}/summarize-content`, {
+    // Use the correct URL format for calling another edge function
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) {
+      throw new Error("SUPABASE_URL environment variable is not set");
+    }
+    
+    // Build the proper URL for the edge function
+    const summaryFunctionUrl = `${supabaseUrl}/functions/v1/summarize-content`;
+    console.log(`Calling summary function at: ${summaryFunctionUrl}`);
+    
+    const summaryResponse = await fetch(summaryFunctionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
