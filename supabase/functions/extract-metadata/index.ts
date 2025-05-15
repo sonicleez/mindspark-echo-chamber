@@ -20,14 +20,19 @@ serve(async (req) => {
       );
     }
 
-    // Mock metadata extraction
-    // In a real implementation, you'd use libraries to fetch and parse the content
+    console.log("Extracting metadata from:", url);
+    
+    // Mock metadata extraction with improved response format
+    // In a real implementation, you'd use libraries like unfurl.js or metascraper
     const metadata = {
       title: `Title from ${url}`,
       description: `Description extracted from ${url}`,
       image: null,
       favicon: null,
+      tags: ["extracted", "tag"],
     };
+
+    console.log("Extracted metadata:", metadata);
 
     return new Response(
       JSON.stringify({ metadata }),
@@ -37,6 +42,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error("Error extracting metadata:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

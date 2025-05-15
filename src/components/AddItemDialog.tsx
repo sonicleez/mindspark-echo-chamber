@@ -59,20 +59,25 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
         throw new Error(error.message);
       }
 
-      if (data.title && title === '') {
-        setTitle(data.title);
-      }
+      console.log('Extracted metadata response:', data);
 
-      if (data.description && description === '') {
-        setDescription(data.description);
-      }
+      // Always set the extracted data if available, regardless of whether fields are already filled
+      if (data?.metadata) {
+        if (data.metadata.title) {
+          setTitle(data.metadata.title);
+        }
 
-      if (data.imageUrl && imageUrl === '') {
-        setImageUrl(data.imageUrl);
-      }
+        if (data.metadata.description) {
+          setDescription(data.metadata.description);
+        }
 
-      if (data.tags && data.tags.length > 0 && tags === '') {
-        setTags(data.tags.join(', '));
+        if (data.metadata.image) {
+          setImageUrl(data.metadata.image);
+        }
+
+        if (data.metadata.tags && data.metadata.tags.length > 0) {
+          setTags(data.metadata.tags.join(', '));
+        }
       }
 
       toast.success('Metadata extracted successfully');
@@ -154,7 +159,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
   };
 
   const handleUrlBlur = () => {
-    if (url && !title && !imageUrl && !description && !tags) {
+    if (url) {
       extractMetadata();
     }
   };
