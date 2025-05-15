@@ -14,7 +14,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   // Configure Rive with autoplay set to false so we can control it
   const { RiveComponent, rive } = useRive({
-    src: 'https://rive.app/s/LevuX-GdcU_onEuVgwPn3g/embed',
+    src: '/animations/animation.riv', // This will use the local file once uploaded
     autoplay: false,
     stateMachines: 'State Machine 1',
   });
