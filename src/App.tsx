@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
 
@@ -30,7 +31,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/profile" element={<Settings />} />
+              <Route path="/profile" element={<Profile />} />
             </Route>
             
             {/* Catch-all route */}

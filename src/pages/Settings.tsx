@@ -34,7 +34,6 @@ const Settings = () => {
     } catch (error: any) {
       toast("Error updating email", {
         description: error.message,
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -60,7 +59,6 @@ const Settings = () => {
     } catch (error: any) {
       toast("Error updating password", {
         description: error.message,
-        variant: "destructive",
       });
     } finally {
       setLoading(false);

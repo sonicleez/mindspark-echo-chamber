@@ -10,41 +10,72 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, Lock } from "lucide-react";
+import { User, Settings, LogOut, Lock, UserCircle } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from "@/components/ui/use-toast";
 
 const UserMenu = () => {
   const { user, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isCheckingRole, setIsCheckingRole] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
     
     const checkAdminRole = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        if (isMounted) {
+          setIsCheckingRole(false);
+        }
+        return;
+      }
       
       try {
+        console.log('Checking admin role for user:', user.id);
+        
         const { data, error } = await supabase
           .from('admin_roles')
           .select('*')
           .eq('user_id', user.id)
           .eq('role', 'admin');
         
-        if (!error && data && data.length > 0 && isMounted) {
-          setIsAdmin(true);
+        console.log('Admin role check result:', { data, error });
+        
+        if (error) {
+          console.error('Error checking admin role:', error);
+          if (isMounted) {
+            setIsAdmin(false);
+            setIsCheckingRole(false);
+          }
+          return;
+        }
+        
+        if (isMounted) {
+          setIsAdmin(data && data.length > 0);
+          setIsCheckingRole(false);
         }
       } catch (error) {
         console.error('Error checking admin role:', error);
+        if (isMounted) {
+          setIsAdmin(false);
+          setIsCheckingRole(false);
+        }
       }
     };
     
-    if (user?.id) {
-      checkAdminRole();
-    }
+    // Add a small delay to ensure user is properly loaded
+    const timer = setTimeout(() => {
+      if (user?.id) {
+        checkAdminRole();
+      } else {
+        setIsCheckingRole(false);
+      }
+    }, 500);
     
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
   }, [user?.id]);
 
@@ -63,7 +94,7 @@ const UserMenu = () => {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link to="/profile">
-            <User className="mr-2 h-4 w-4" />
+            <UserCircle className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </Link>
         </DropdownMenuItem>
@@ -74,7 +105,12 @@ const UserMenu = () => {
           </Link>
         </DropdownMenuItem>
         
-        {isAdmin && (
+        {isCheckingRole ? (
+          <DropdownMenuItem disabled>
+            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-foreground border-t-transparent"></div>
+            <span>Checking permissions...</span>
+          </DropdownMenuItem>
+        ) : isAdmin && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
