@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Plus, Link, Eye } from 'lucide-react';
+import { Plus, Link, Eye, Download } from 'lucide-react';
 import { RiveAnimation } from './types';
 import { AnimationsTable } from './AnimationsTable';
 import { UploadDialog } from './UploadDialog';
