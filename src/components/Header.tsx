@@ -17,8 +17,8 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   const [searchFocused, setSearchFocused] = useState(false);
   
-  // Use the specific animation file URL directly
-  const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747290270792_Addnew.riv';
+  // Use the new animation file URL 
+  const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747292766881_Addnew1.riv';
   
   // Use Rive with state machine for interactivity
   const { RiveComponent, rive } = useRive({
@@ -28,8 +28,8 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   });
 
   // Create state machine inputs for hover and click interactions if they exist
-  const hoverInput = useStateMachineInput(rive, 'State Machine 1', 'hover', false);
-  const pressInput = useStateMachineInput(rive, 'State Machine 1', 'pressed', false);
+  const hoverInput = useStateMachineInput(rive, 'State Machine 1', 'hover');
+  const pressInput = useStateMachineInput(rive, 'State Machine 1', 'pressed');
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
