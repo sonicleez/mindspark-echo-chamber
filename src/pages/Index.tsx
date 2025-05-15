@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import ItemGrid from '@/components/ItemGrid';
@@ -146,17 +145,17 @@ const Index: React.FC = () => {
         
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mind-accent"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF5733]"></div>
           </div>
         ) : filteredItems.length > 0 ? (
           <ItemGrid items={filteredItems} onItemClick={handleItemClick} />
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-mind-text-secondary">
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
             <p className="text-lg">No items found</p>
             <Button 
               variant="link" 
               onClick={handleAddItem}
-              className="mt-2 text-mind-accent hover:text-mind-accent-hover"
+              className="mt-2 text-[#FF5733] hover:text-[#FF5733]/80"
             >
               Add a new item
             </Button>

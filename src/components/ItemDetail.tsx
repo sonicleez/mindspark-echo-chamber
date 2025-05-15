@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 interface ItemDetailProps {
   item: Item | null;
@@ -26,25 +27,38 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
     return format(date, 'MMMM d, yyyy');
   };
 
+  // Format URL for display (truncate if too long)
+  const formatUrl = (url: string) => {
+    if (url.length > 40) {
+      return `${url.substring(0, 37)}...`;
+    }
+    return url;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl bg-[#1E1E24] border-[#333] text-white">
+      <DialogContent className="sm:max-w-2xl bg-[#1E1E24] border-[#333] text-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-medium flex items-center justify-between text-white">
-            {item.title}
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-white hover:bg-[#333]">
+          <DialogTitle className="text-xl font-medium flex items-center justify-between text-white pr-8">
+            <span className="line-clamp-1">{item.title}</span>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-white hover:bg-[#333] absolute right-4 top-4">
               <X className="h-4 w-4" />
             </Button>
           </DialogTitle>
         </DialogHeader>
         
         {item.imageUrl && (
-          <div className="rounded-md overflow-hidden my-2">
-            <img 
-              src={item.imageUrl} 
-              alt={item.title} 
-              className="w-full object-cover"
-            />
+          <div className="my-4 w-full">
+            <AspectRatio ratio={16 / 9} className="bg-[#2A2A30] overflow-hidden rounded-md">
+              <img 
+                src={item.imageUrl} 
+                alt={item.title} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder.svg';
+                }}
+              />
+            </AspectRatio>
           </div>
         )}
         
@@ -69,14 +83,15 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
           {item.url && (
             <div className="flex items-start">
               <ExternalLink className="h-4 w-4 mr-2 text-gray-400 mt-1 flex-shrink-0" />
-              <div className="flex flex-col">
+              <div className="flex flex-col flex-1 min-w-0">
                 <a 
                   href={item.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-300 hover:text-[#FF5733] underline break-all"
+                  className="text-sm text-gray-300 hover:text-[#FF5733] underline break-all line-clamp-2"
+                  title={item.url}
                 >
-                  {item.url}
+                  {formatUrl(item.url)}
                 </a>
                 <span className="text-xs text-gray-500 mt-1">
                   Saved on {formatDate(item.dateAdded)}
