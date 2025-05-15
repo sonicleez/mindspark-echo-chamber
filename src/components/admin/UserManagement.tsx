@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 
 interface UserProfile {
   id: string;
-  email: string;
+  email: string | null;
   username: string | null;
   is_admin: boolean;
   created_at: string;
@@ -27,32 +27,38 @@ const UserManagement: React.FC = () => {
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['adminUsers'],
     queryFn: async () => {
-      // Fetch users from auth.users and join with profiles
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) throw authError;
-      
-      // Fetch profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
+      try {
+        // Fetch profiles directly with their email addresses
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, is_admin, created_at, auth.users!inner(email)')
+          .returns<Array<{
+            id: string;
+            username: string | null;
+            is_admin: boolean;
+            created_at: string;
+            auth: { users: { email: string } }
+          }>>(); // Type assertion to help TypeScript understand the structure
         
-      if (profilesError) throw profilesError;
-      
-      // Join the data
-      const mergedUsers = authUsers?.users?.map(user => {
-        const profile = profiles?.find(p => p.id === user.id);
-        return {
-          id: user.id,
-          email: user.email,
-          username: profile?.username,
-          is_admin: profile?.is_admin || false,
-          created_at: user.created_at,
-        };
-      }) || [];
-      
-      return mergedUsers;
+        if (profilesError) throw profilesError;
+        
+        if (!profiles) return [];
+        
+        // Transform the data structure to match our component's expectations
+        return profiles.map(profile => ({
+          id: profile.id,
+          email: profile?.auth?.users?.email || 'N/A',
+          username: profile.username,
+          is_admin: profile.is_admin || false,
+          created_at: profile.created_at
+        }));
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
     },
+    staleTime: 30000, // 30 seconds
+    retry: 1,
   });
   
   const updateAdminStatus = useMutation({
