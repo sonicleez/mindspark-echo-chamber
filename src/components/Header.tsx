@@ -44,6 +44,31 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
     }, 300);
   };
 
+  // Event handler functions for mouse interactions
+  const handleMouseEnter = () => {
+    if (hoverInput) {
+      hoverInput.value = true;
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverInput) {
+      hoverInput.value = false;
+    }
+  };
+
+  const handleMouseDown = () => {
+    if (pressInput) {
+      pressInput.value = true;
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (pressInput) {
+      pressInput.value = false;
+    }
+  };
+
   return (
     <header className="sticky top-0 z-10 w-full bg-[#1E1E24]/90 backdrop-blur-sm border-b border-[#333] py-4">
       <div className="container mx-auto px-4 flex items-center justify-between">
@@ -68,10 +93,10 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
             onClick={handleAddButtonClick}
             variant="ghost" 
             className="p-2 hover:bg-[#333] text-white flex items-center"
-            onMouseEnter={() => hoverInput?.value = true}
-            onMouseLeave={() => hoverInput?.value = false}
-            onMouseDown={() => pressInput?.value = true}
-            onMouseUp={() => pressInput?.value = false}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
           >
             <div className="h-8 w-8 flex items-center justify-center">
               <RiveComponent />
