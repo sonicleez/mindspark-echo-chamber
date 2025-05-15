@@ -5,11 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Link, Eye } from 'lucide-react';
 import { RiveAnimation } from './types';
 import { AnimationsTable } from './AnimationsTable';
 import { UploadDialog } from './UploadDialog';
 import { PreviewDialog } from './PreviewDialog';
+import { getPublicUrl } from './utils';
 
 const RiveAnimationManager: React.FC = () => {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ const RiveAnimationManager: React.FC = () => {
   const [previewAnimation, setPreviewAnimation] = useState<RiveAnimation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [lastUploadedAnimation, setLastUploadedAnimation] = useState<RiveAnimation | null>(null);
   
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -60,24 +62,48 @@ const RiveAnimationManager: React.FC = () => {
         if (uploadError) throw uploadError;
         
         // Create record in rive_animations table
-        const { error: insertError } = await supabase
+        const { data, error: insertError } = await supabase
           .from('rive_animations')
           .insert({
             name: animationName,
             description: animationDescription || null,
             file_path: filePath,
             created_by: user.id,
-          });
+          })
+          .select()
+          .single();
           
         if (insertError) throw insertError;
+        
+        // Return the new animation data
+        return data;
       } catch (error) {
         console.error('Upload error:', error);
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['riveAnimations'] });
-      toast.success('Animation uploaded successfully');
+      
+      // Set the last uploaded animation to display download URL
+      setLastUploadedAnimation(data);
+      
+      // Show success message with download URL
+      const downloadUrl = getPublicUrl(data.file_path);
+      toast.success(
+        <div className="flex flex-col">
+          <span>Animation uploaded successfully!</span>
+          <span className="text-xs mt-1">Click to view and download your animation</span>
+        </div>,
+        {
+          duration: 5000,
+          action: {
+            label: 'View',
+            onClick: () => setPreviewAnimation(data),
+          },
+        }
+      );
+      
       resetForm();
       setShowNewAnimationDialog(false);
     },
@@ -179,6 +205,54 @@ const RiveAnimationManager: React.FC = () => {
           <Plus className="mr-2 h-4 w-4" /> Upload Animation
         </Button>
       </div>
+      
+      {lastUploadedAnimation && (
+        <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
+          <h3 className="text-green-800 font-medium mb-2">Last Uploaded Animation</h3>
+          <div className="flex flex-col space-y-2">
+            <p className="text-sm"><strong>Name:</strong> {lastUploadedAnimation.name}</p>
+            <div className="flex flex-col">
+              <p className="text-sm font-medium mb-1">Download URL:</p>
+              <div className="bg-white p-2 rounded border text-xs break-all">
+                {getPublicUrl(lastUploadedAnimation.file_path)}
+              </div>
+            </div>
+            <div className="flex space-x-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  navigator.clipboard.writeText(getPublicUrl(lastUploadedAnimation.file_path));
+                  toast.success('URL copied to clipboard');
+                }}
+              >
+                <Link className="h-4 w-4 mr-1" /> Copy URL
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open(getPublicUrl(lastUploadedAnimation.file_path), '_blank')}
+              >
+                <Download className="h-4 w-4 mr-1" /> Download
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPreviewAnimation(lastUploadedAnimation)}
+              >
+                <Eye className="h-4 w-4 mr-1" /> Preview
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setLastUploadedAnimation(null)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <AnimationsTable 
         animations={animations}
