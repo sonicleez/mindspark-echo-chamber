@@ -11,38 +11,35 @@ import AdminPage from "./pages/Admin";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
 import RequireAdmin from "./components/RequireAdmin";
-import { SidebarProvider } from "@/components/ui/sidebar";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <SidebarProvider defaultOpen={false}>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/auth" element={<Auth />} />
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Protected routes - require authentication */}
+            <Route element={<RequireAuth />}>
+              <Route path="/" element={<Index />} />
               
-              {/* Protected routes - require authentication */}
-              <Route element={<RequireAuth />}>
-                <Route path="/" element={<Index />} />
-                
-                {/* Admin routes - require admin role */}
-                <Route element={<RequireAdmin />}>
-                  <Route path="/admin" element={<AdminPage />} />
-                </Route>
+              {/* Admin routes - require admin role */}
+              <Route element={<RequireAdmin />}>
+                <Route path="/admin" element={<AdminPage />} />
               </Route>
-              
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </SidebarProvider>
+            </Route>
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

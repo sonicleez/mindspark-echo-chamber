@@ -1,19 +1,26 @@
 
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import UserMenu from './UserMenu';
+import { toast } from 'sonner';
+import { Button } from './ui/button';
 
 interface HeaderProps {
   onAddItem: () => void;
   onSearch: (query: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onSearch }) => {
+const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   const [searchFocused, setSearchFocused] = useState(false);
   
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
+  };
+
+  const handleAddButtonClick = () => {
+    onAddItem();
+    toast.success("Bắt đầu thêm mục mới");
   };
 
   return (
@@ -35,6 +42,17 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
               onBlur={() => setSearchFocused(false)}
             />
           </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleAddButtonClick}
+            className="bg-[#9b87f5] hover:bg-[#8a76e4] text-white flex items-center gap-1 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> 
+            <span className="hidden sm:inline">Add New</span>
+          </Button>
+          <UserMenu />
         </div>
       </div>
     </header>

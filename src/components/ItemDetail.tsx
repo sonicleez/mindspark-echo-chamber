@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 
-export interface ItemDetailProps {
+interface ItemDetailProps {
   item: Item | null;
   isOpen: boolean;
   onClose: () => void;

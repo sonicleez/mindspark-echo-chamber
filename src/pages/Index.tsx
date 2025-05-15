@@ -1,225 +1,161 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import ItemGrid from '@/components/ItemGrid';
-import Filters from '@/components/Filters';
-import SpaceSelector from '@/components/SpaceSelector';
+import ItemDetail from '@/components/ItemDetail';
 import AddItemDialog from '@/components/AddItemDialog';
 import EditItemDialog from '@/components/EditItemDialog';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
-import { Item } from '@/services/itemsService';
-import { Space } from '@/services/spacesService';
-import { addItem, updateItem, deleteItem, getItems } from '@/services/itemsService';
-import { createSpace, getSpaces } from '@/services/spacesService';
-import ItemDetail from '@/components/ItemDetail';
+import Filters, { FilterType } from '@/components/Filters';
+import SpaceSelector from '@/components/SpaceSelector';
+import { Item } from '@/components/ItemCard';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import AppSidebar from "@/components/AppSidebar";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getItems, addItem, deleteItem, updateItem } from '@/services/itemsService';
+import { getSpaces, createSpace, updateSpace, deleteSpace, Space } from '@/services/spacesService';
 
-interface FilterType {
-  types: string[];
-  tags: string[];
-  dateRange: { from: Date | null; to: Date | null };
-}
-
-const Index = () => {
-  const { user } = useAuth();
-  const [items, setItems] = useState<Item[]>([]);
+const Index: React.FC = () => {
+  const queryClient = useQueryClient();
+  
+  // State
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
-  const [spaces, setSpaces] = useState<Space[]>([]);
-  const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [detailItem, setDetailItem] = useState<Item | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<FilterType>({
-    types: [],
-    tags: [],
-    dateRange: { from: null, to: null }
+  const [currentFilter, setCurrentFilter] = useState<FilterType>('all');
+  const [currentSpaceId, setCurrentSpaceId] = useState<string | null>(null);
+
+  // Queries
+  const { data: spaces = [], isLoading: isLoadingSpaces } = useQuery({
+    queryKey: ['spaces'],
+    queryFn: getSpaces,
+  });
+  
+  const { data: items = [], isLoading: isLoadingItems } = useQuery({
+    queryKey: ['items', currentSpaceId],
+    queryFn: () => getItems(currentSpaceId),
+  });
+  
+  // Mutations
+  const addItemMutation = useMutation({
+    mutationFn: addItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items', currentSpaceId] });
+      toast.success('Mục đã được thêm thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể thêm mục: ${error.message}`);
+    }
   });
 
-  // Load spaces and items when component mounts
+  const updateItemMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Item, 'id' | 'dateAdded'>> }) => 
+      updateItem(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Mục đã được cập nhật thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể cập nhật mục: ${error.message}`);
+    }
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: deleteItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Mục đã được xóa thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể xóa mục: ${error.message}`);
+    }
+  });
+
+  const createSpaceMutation = useMutation({
+    mutationFn: createSpace,
+    onSuccess: (newSpace) => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      setCurrentSpaceId(newSpace.id);
+      toast.success('Không gian đã được tạo thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể tạo không gian: ${error.message}`);
+    }
+  });
+
+  const updateSpaceMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Space, 'id' | 'created_at'>> }) => 
+      updateSpace(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      toast.success('Không gian đã được cập nhật thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể cập nhật không gian: ${error.message}`);
+    }
+  });
+
+  const deleteSpaceMutation = useMutation({
+    mutationFn: deleteSpace,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setCurrentSpaceId(null);
+      toast.success('Không gian đã được xóa thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể xóa không gian: ${error.message}`);
+    }
+  });
+
+  // Apply filters when items, searchQuery, or currentFilter changes
   useEffect(() => {
-    if (user) {
-      fetchSpaces();
-      fetchItems();
-    }
-  }, [user]);
-
-  // Update filtered items when items, search query, or filters change
-  useEffect(() => {
-    filterItems();
-  }, [items, searchQuery, activeFilters, selectedSpace]);
-
-  const fetchSpaces = async () => {
-    try {
-      const spacesData = await getSpaces();
-      setSpaces(spacesData);
-      
-      // Select the first space by default if there is one and none is selected
-      if (spacesData.length > 0 && !selectedSpace) {
-        setSelectedSpace(spacesData[0]);
-      }
-    } catch (error) {
-      console.error('Error fetching spaces:', error);
-      toast.error('Failed to load spaces');
-    }
-  };
-
-  const fetchItems = async () => {
-    try {
-      const itemsData = await getItems();
-      setItems(itemsData);
-    } catch (error) {
-      console.error('Error fetching items:', error);
-      toast.error('Failed to load items');
-    }
-  };
-
-  const filterItems = () => {
-    // Ensure items is defined before filtering
-    if (!items) {
-      setFilteredItems([]);
-      return;
-    }
+    let result = [...items];
     
-    let filtered = [...items];
-    
-    // Filter by space
-    if (selectedSpace) {
-      filtered = filtered.filter(item => item.space_id === selectedSpace.id);
-    }
-    
-    // Filter by search query
+    // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.title?.toLowerCase().includes(query) || 
-        item.description?.toLowerCase().includes(query) ||
-        item.url?.toLowerCase().includes(query) ||
-        (item.tags && item.tags.some(tag => tag.toLowerCase().includes(query)))
+      const lowerQuery = searchQuery.toLowerCase();
+      result = result.filter(
+        item => 
+          item.title.toLowerCase().includes(lowerQuery) || 
+          item.description?.toLowerCase().includes(lowerQuery) || 
+          item.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))
       );
     }
     
-    // Filter by type
-    if (activeFilters.types.length > 0) {
-      filtered = filtered.filter(item => item.type && activeFilters.types.includes(item.type));
-    }
-    
-    // Filter by tags
-    if (activeFilters.tags.length > 0) {
-      filtered = filtered.filter(item => 
-        item.tags && item.tags.some(tag => activeFilters.tags.includes(tag))
-      );
-    }
-    
-    // Filter by date range
-    if (activeFilters.dateRange.from || activeFilters.dateRange.to) {
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.dateAdded);
-        
-        if (activeFilters.dateRange.from && activeFilters.dateRange.to) {
-          return itemDate >= activeFilters.dateRange.from && itemDate <= activeFilters.dateRange.to;
-        } else if (activeFilters.dateRange.from) {
-          return itemDate >= activeFilters.dateRange.from;
-        } else if (activeFilters.dateRange.to) {
-          return itemDate <= activeFilters.dateRange.to;
+    // Apply category filter
+    if (currentFilter !== 'all') {
+      result = result.filter(item => {
+        switch (currentFilter) {
+          case 'images':
+            return !!item.imageUrl;
+          case 'articles':
+            return !!item.url;
+          case 'notes':
+            return !item.url && !item.imageUrl;
+          default:
+            return true;
         }
-        
-        return true;
       });
     }
     
-    setFilteredItems(filtered);
-  };
+    setFilteredItems(result);
+  }, [items, searchQuery, currentFilter]);
 
-  const handleAddItem = async (newItem: Partial<Item>) => {
-    try {
-      // Make sure the new item is associated with the selected space
-      if (selectedSpace) {
-        newItem.space_id = selectedSpace.id;
-      }
-      
-      // Ensure the required title property is present
-      if (!newItem.title) {
-        newItem.title = "Untitled";
-      }
-      
-      const createdItem = await addItem(newItem as Omit<Item, 'id' | 'dateAdded'>);
-      setItems(prevItems => [...(prevItems || []), createdItem]);
-      toast.success('Item added successfully');
-      setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error('Error adding item:', error);
-      toast.error('Failed to add item');
-    }
-  };
-
-  const handleEditItem = async (updatedItem: Partial<Item>) => {
-    try {
-      if (!selectedItem) return;
-      
-      const updated = await updateItem(selectedItem.id, updatedItem);
-      
-      setItems(prevItems =>
-        prevItems.map(item =>
-          item.id === selectedItem.id ? { ...item, ...updated } : item
-        )
-      );
-      
-      // If the detail view is open for this item, update it too
-      if (detailItem && detailItem.id === selectedItem.id) {
-        setDetailItem({ ...detailItem, ...updated });
-      }
-      
-      toast.success('Item updated successfully');
-      setIsEditDialogOpen(false);
-      setSelectedItem(null);
-    } catch (error) {
-      console.error('Error updating item:', error);
-      toast.error('Failed to update item');
-    }
-  };
-
-  const handleDeleteItem = async (id: string) => {
-    try {
-      await deleteItem(id);
-      
-      // Remove item from state
-      setItems(prevItems => prevItems.filter(item => item.id !== id));
-      
-      // Close detail view if open
-      if (detailItem && detailItem.id === id) {
-        setDetailItem(null);
-      }
-      
-      toast.success('Item deleted successfully');
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      toast.error('Failed to delete item');
-    }
-  };
-
-  const handleAddSpace = async (name: string, description: string) => {
-    try {
-      const newSpace = await createSpace({ name, description });
-      setSpaces(prevSpaces => [...prevSpaces, newSpace]);
-      setSelectedSpace(newSpace);
-      toast.success('Space created successfully');
-    } catch (error) {
-      console.error('Error creating space:', error);
-      toast.error('Failed to create space');
-    }
-  };
-
+  // Event handlers
   const handleItemClick = (item: Item) => {
-    setDetailItem(item);
+    setSelectedItem(item);
+    setIsDetailOpen(true);
   };
 
-  const handleEditButtonClick = (item: Item) => {
-    setSelectedItem(item);
+  const handleAddItem = () => {
+    setIsAddDialogOpen(true);
+  };
+
+  const handleEditItem = () => {
+    setIsDetailOpen(false);
     setIsEditDialogOpen(true);
   };
 
@@ -227,82 +163,106 @@ const Index = () => {
     setSearchQuery(query);
   };
 
-  const toggleFilters = () => {
-    setIsFiltersOpen(!isFiltersOpen);
+  const handleFilterChange = (filter: FilterType) => {
+    setCurrentFilter(filter);
   };
 
-  const handleFilterChange = (filters: FilterType) => {
-    setActiveFilters(filters);
+  const handleCreateItem = (newItemData: Omit<Item, 'id' | 'dateAdded'>) => {
+    addItemMutation.mutate(newItemData);
+    setIsAddDialogOpen(false);
   };
+  
+  const handleUpdateItem = (id: string, updatedData: Partial<Omit<Item, 'id' | 'dateAdded'>>) => {
+    updateItemMutation.mutate({ id, data: updatedData });
+    setIsEditDialogOpen(false);
+  };
+  
+  const handleDeleteItem = (id: string) => {
+    if (window.confirm('Bạn có chắc muốn xóa mục này không?')) {
+      deleteItemMutation.mutate(id);
+      setIsDetailOpen(false);
+    }
+  };
+
+  const handleCreateSpace = async (spaceData: { name: string; description?: string }) => {
+    await createSpaceMutation.mutateAsync(spaceData);
+  };
+
+  const handleUpdateSpace = async (id: string, spaceData: { name: string; description?: string }) => {
+    await updateSpaceMutation.mutateAsync({ id, data: spaceData });
+  };
+
+  const handleDeleteSpace = async (id: string) => {
+    await deleteSpaceMutation.mutateAsync(id);
+  };
+
+  const handleSpaceChange = (spaceId: string | null) => {
+    setCurrentSpaceId(spaceId);
+  };
+
+  const isLoading = isLoadingItems || isLoadingSpaces;
 
   return (
-    <div className="flex h-screen bg-[#121212]">
-      <AppSidebar onAddItem={() => setIsAddDialogOpen(true)} onFilterToggle={toggleFilters} />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header 
-          onAddItem={() => setIsAddDialogOpen(true)} 
-          onSearch={handleSearch}
-        />
-        
-        <div className="flex pt-16 h-full">
-          {isFiltersOpen && (
-            <div className="w-64 p-4 border-r border-[#333] overflow-auto">
-              <Filters onFilterChange={handleFilterChange} items={items || []} />
-            </div>
-          )}
-          
-          <div className="flex-1 p-4 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <SpaceSelector
-                spaces={spaces}
-                selectedSpace={selectedSpace}
-                onSelectSpace={setSelectedSpace}
-                onAddSpace={handleAddSpace}
-              />
-              <div className="flex items-center">
-                <SidebarTrigger className="mr-2" />
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-auto">
-              <ItemGrid 
-                items={filteredItems || []}
-                onItemClick={handleItemClick}
-              />
-            </div>
-          </div>
-          
-          {detailItem && (
-            <div className="w-1/3 border-l border-[#333] overflow-auto">
-              <ItemDetail 
-                item={detailItem}
-                isOpen={Boolean(detailItem)}
-                onClose={() => setDetailItem(null)}
-                onEdit={() => {
-                  setSelectedItem(detailItem);
-                  setIsEditDialogOpen(true);
-                }} 
-                onDelete={() => handleDeleteItem(detailItem.id)}
-              />
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col bg-[#121212]">
+      <Header onAddItem={handleAddItem} onSearch={handleSearch} />
       
-      <AddItemDialog 
-        isOpen={isAddDialogOpen} 
-        onClose={() => setIsAddDialogOpen(false)}
-        onAddItem={handleAddItem}
+      <main className="flex-1 container mx-auto px-4 pt-20 pb-8">
+        <div className="pt-4 mb-6 flex flex-col sm:flex-row items-center gap-4">
+          <SpaceSelector 
+            spaces={spaces}
+            currentSpaceId={currentSpaceId}
+            onSpaceChange={handleSpaceChange}
+            onCreateSpace={handleCreateSpace}
+            onEditSpace={handleUpdateSpace}
+            onDeleteSpace={handleDeleteSpace}
+          />
+          <div className="flex-grow">
+            <Filters currentFilter={currentFilter} onFilterChange={handleFilterChange} />
+          </div>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9b87f5]"></div>
+          </div>
+        ) : filteredItems.length > 0 ? (
+          <ItemGrid items={filteredItems} onItemClick={handleItemClick} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-[#1A1A1A]/30 rounded-lg border border-[#333] backdrop-blur-sm">
+            <p className="text-lg">Không tìm thấy mục nào</p>
+            <Button 
+              variant="link" 
+              onClick={handleAddItem}
+              className="mt-2 text-[#9b87f5] hover:text-[#7E69AB]"
+            >
+              Thêm mục mới
+            </Button>
+          </div>
+        )}
+      </main>
+      
+      <ItemDetail 
+        item={selectedItem} 
+        isOpen={isDetailOpen} 
+        onClose={() => setIsDetailOpen(false)} 
+        onDelete={selectedItem ? () => handleDeleteItem(selectedItem.id) : undefined}
+        onEdit={selectedItem ? handleEditItem : undefined}
       />
       
+      <AddItemDialog 
+        isOpen={isAddDialogOpen}
+        onClose={() => setIsAddDialogOpen(false)}
+        onAddItem={handleCreateItem}
+        spaces={spaces}
+        currentSpaceId={currentSpaceId}
+      />
+
       <EditItemDialog
         isOpen={isEditDialogOpen}
-        onClose={() => {
-          setIsEditDialogOpen(false);
-          setSelectedItem(null);
-        }}
+        onClose={() => setIsEditDialogOpen(false)}
+        onEditItem={handleUpdateItem}
         item={selectedItem}
-        onUpdateItem={handleEditItem}
+        spaces={spaces}
       />
     </div>
   );
