@@ -9,6 +9,104 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_configs: {
+        Row: {
+          additional_config: Json | null
+          created_at: string
+          id: string
+          is_active: boolean
+          max_tokens: number
+          model: string
+          name: string
+          provider: Database["public"]["Enums"]["ai_provider"]
+          temperature: number
+          updated_at: string
+        }
+        Insert: {
+          additional_config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          model: string
+          name: string
+          provider: Database["public"]["Enums"]["ai_provider"]
+          temperature?: number
+          updated_at?: string
+        }
+        Update: {
+          additional_config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          model?: string
+          name?: string
+          provider?: Database["public"]["Enums"]["ai_provider"]
+          temperature?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_usage_logs: {
+        Row: {
+          config_id: string | null
+          created_at: string
+          id: string
+          operation: string
+          successful: boolean
+          tokens_used: number | null
+          user_id: string | null
+        }
+        Insert: {
+          config_id?: string | null
+          created_at?: string
+          id?: string
+          operation: string
+          successful?: boolean
+          tokens_used?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          config_id?: string | null
+          created_at?: string
+          id?: string
+          operation?: string
+          successful?: boolean
+          tokens_used?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "ai_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           created_at: string
@@ -80,7 +178,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      ai_provider: "openai" | "gemini" | "openrouter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -195,6 +293,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ai_provider: ["openai", "gemini", "openrouter"],
+    },
   },
 } as const

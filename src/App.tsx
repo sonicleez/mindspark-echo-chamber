@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import Admin from "./pages/Admin";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
 
@@ -26,6 +27,7 @@ const App = () => (
             {/* Protected routes */}
             <Route element={<RequireAuth />}>
               <Route path="/" element={<Index />} />
+              <Route path="/admin" element={<Admin />} />
             </Route>
             
             {/* Catch-all route */}
