@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import ItemGrid from '@/components/ItemGrid';
@@ -8,9 +7,9 @@ import AddItemDialog from '@/components/AddItemDialog';
 import EditItemDialog from '@/components/EditItemDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Item } from '@/components/ItemCard'; // Import Item from ItemCard instead
-import { Space } from '@/services/spacesService'; // Import Space from spacesService
-import { addItem, updateItem, deleteItem, getItems } from '@/services/itemsService'; // Use consistent naming
+import { Item } from '@/services/itemsService';
+import { Space } from '@/services/spacesService';
+import { addItem, updateItem, deleteItem, getItems } from '@/services/itemsService';
 import { createSpace, getSpaces } from '@/services/spacesService';
 import ItemDetail from '@/components/ItemDetail';
 import { toast } from 'sonner';
@@ -256,6 +255,7 @@ const Index = () => {
             <div className="flex items-center justify-between mb-4">
               <SpaceSelector
                 spaces={spaces}
+                selectedSpace={selectedSpace}
                 onSelectSpace={setSelectedSpace}
                 onAddSpace={handleAddSpace}
               />

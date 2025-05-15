@@ -1,166 +1,143 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Item } from '@/components/ItemCard';
+import { v4 as uuidv4 } from 'uuid';
 
-export async function getItems(space_id?: string): Promise<Item[]> {
-  let query = supabase
-    .from('items')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  // If space_id is provided, filter items by that space
-  if (space_id) {
-    query = query.eq('space_id', space_id);
-  }
-  
-  const { data, error } = await query;
-  
-  if (error) throw error;
-  if (!data) return [];
-  
-  return data.map(item => ({
-    id: item.id,
-    title: item.title,
-    description: item.description || undefined,
-    imageUrl: item.image_url || undefined,
-    url: item.url || undefined,
-    tags: item.tags || [],
-    dateAdded: new Date(item.created_at),
-    summary: item.summary || undefined,
-    space_id: item.space_id || undefined,
-    type: item.type || 'other'
-  }));
+export interface Item {
+  id: string;
+  title: string;
+  description?: string;
+  url?: string;
+  image_url?: string;
+  tags?: string[];
+  space_id: string;
+  dateAdded: string;
+  user_id: string;
+  type?: string;
+  summary?: string;
 }
 
-// Exporting as both addItem and createItem to maintain compatibility
-export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Item> {
-  // Get the current user
-  const { data: { user } } = await supabase.auth.getUser();
+type ItemInput = Omit<Item, 'id' | 'dateAdded'>;
+
+// Get all items for the current user
+export const getItems = async (): Promise<Item[]> => {
+  const { data: user } = await supabase.auth.getUser();
   
-  if (!user) {
-    throw new Error('You must be logged in to add items');
+  if (!user || !user.user) {
+    throw new Error('User not authenticated');
   }
   
-  let finalItem = {...item};
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .eq('user_id', user.user.id)
+    .order('created_at', { ascending: false });
+    
+  if (error) throw error;
   
-  // If URL is provided, extract metadata
-  if (item.url) {
-    try {
-      const { data, error } = await supabase.functions.invoke('extract-metadata', {
-        body: { url: item.url }
-      });
-      
-      if (!error && data) {
-        // Only override these fields if they're empty or not provided
-        if (!finalItem.title) finalItem.title = data.title;
-        if (!finalItem.description) finalItem.description = data.description;
-        if (!finalItem.imageUrl) finalItem.imageUrl = data.imageUrl;
-        if (!finalItem.tags || finalItem.tags.length === 0) finalItem.tags = data.tags;
-        if (data.summary) finalItem.summary = data.summary;
-      }
-    } catch (error) {
-      console.error('Error extracting metadata:', error);
-      // Continue with item creation even if metadata extraction fails
-    }
+  // Map database fields to Item interface
+  return (data || []).map(item => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    url: item.url,
+    image_url: item.image_url,
+    tags: item.tags,
+    space_id: item.space_id,
+    dateAdded: item.created_at,
+    user_id: item.user_id,
+    type: item.type || 'link',
+    summary: item.summary,
+  }));
+};
+
+// Add a new item
+export const addItem = async (item: ItemInput): Promise<Item> => {
+  const { data: userData } = await supabase.auth.getUser();
+  
+  if (!userData || !userData.user) {
+    throw new Error('User not authenticated');
   }
+  
+  const id = uuidv4();
+  const now = new Date().toISOString();
+  const user_id = userData.user.id;
   
   const { data, error } = await supabase
     .from('items')
     .insert({
-      title: finalItem.title,
-      description: finalItem.description,
-      image_url: finalItem.imageUrl,
-      url: finalItem.url,
-      tags: finalItem.tags || [],
-      user_id: user.id,
-      summary: finalItem.summary,
-      space_id: finalItem.space_id,
-      type: finalItem.type || 'other'
+      id,
+      title: item.title,
+      description: item.description || '',
+      url: item.url || '',
+      image_url: item.image_url || '',
+      tags: item.tags || [],
+      space_id: item.space_id,
+      user_id: user_id,
+      created_at: now,
+      updated_at: now,
+      type: item.type || 'link',
+      summary: item.summary || '',
     })
     .select()
     .single();
-  
+    
   if (error) throw error;
   
   return {
     id: data.id,
     title: data.title,
-    description: data.description || undefined,
-    imageUrl: data.image_url || undefined,
-    url: data.url || undefined,
-    tags: data.tags || [],
-    dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined,
-    space_id: data.space_id || undefined,
-    type: data.type || 'other'
+    description: data.description,
+    url: data.url,
+    image_url: data.image_url,
+    tags: data.tags,
+    space_id: data.space_id,
+    dateAdded: data.created_at,
+    user_id: data.user_id,
+    type: data.type || 'link',
+    summary: data.summary,
   };
-}
+};
 
-// For compatibility with Index.tsx
-export const createItem = addItem;
-
-export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'dateAdded'>>): Promise<Item> {
-  const updates: Record<string, any> = {};
+// Update an existing item
+export const updateItem = async (id: string, updates: Partial<Item>): Promise<Item> => {
+  const now = new Date().toISOString();
   
-  if (item.title !== undefined) updates.title = item.title;
-  if (item.description !== undefined) updates.description = item.description;
-  if (item.imageUrl !== undefined) updates.image_url = item.imageUrl;
-  if (item.url !== undefined) updates.url = item.url;
-  if (item.tags !== undefined) updates.tags = item.tags;
-  if (item.summary !== undefined) updates.summary = item.summary;
-  if (item.space_id !== undefined) updates.space_id = item.space_id;
-  if (item.type !== undefined) updates.type = item.type;
+  // Remove id and dateAdded from updates if present
+  const { id: _id, dateAdded: _dateAdded, ...cleanUpdates } = updates;
   
   const { data, error } = await supabase
     .from('items')
-    .update(updates)
+    .update({
+      ...cleanUpdates,
+      updated_at: now,
+    })
     .eq('id', id)
     .select()
     .single();
-  
+    
   if (error) throw error;
   
   return {
     id: data.id,
     title: data.title,
-    description: data.description || undefined,
-    imageUrl: data.image_url || undefined,
-    url: data.url || undefined,
-    tags: data.tags || [],
-    dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined,
-    space_id: data.space_id || undefined,
-    type: data.type || 'other'
+    description: data.description,
+    url: data.url,
+    image_url: data.image_url,
+    tags: data.tags,
+    space_id: data.space_id,
+    dateAdded: data.created_at,
+    user_id: data.user_id,
+    type: data.type || 'link',
+    summary: data.summary,
   };
-}
+};
 
-export async function deleteItem(id: string): Promise<void> {
+// Delete an item
+export const deleteItem = async (id: string): Promise<void> => {
   const { error } = await supabase
     .from('items')
     .delete()
     .eq('id', id);
-  
+    
   if (error) throw error;
-}
-
-export async function summarizeContent(content: string): Promise<string> {
-  if (!content || content.trim() === '') {
-    return '';
-  }
-
-  try {
-    const { data, error } = await supabase.functions.invoke('summarize-content', {
-      body: { content }
-    });
-
-    if (error) {
-      console.error('Error calling summarize-content function:', error);
-      throw error;
-    }
-
-    return data?.summary || '';
-  } catch (error) {
-    console.error('Error summarizing content:', error);
-    throw error;
-  }
-}
+};
