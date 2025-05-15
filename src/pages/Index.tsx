@@ -8,8 +8,9 @@ import AddItemDialog from '@/components/AddItemDialog';
 import EditItemDialog from '@/components/EditItemDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Item, Space } from '@/integrations/supabase/types';
-import { createItem, deleteItem, getItems, updateItem } from '@/services/itemsService';
+import { Item } from '@/components/ItemCard'; // Import Item from ItemCard instead
+import { Space } from '@/services/spacesService'; // Import Space from spacesService
+import { addItem as createItem, updateItem, deleteItem, getItems } from '@/services/itemsService'; // Rename addItem to createItem for local usage
 import { createSpace, getSpaces } from '@/services/spacesService';
 import ItemDetail from '@/components/ItemDetail';
 import { toast } from 'sonner';

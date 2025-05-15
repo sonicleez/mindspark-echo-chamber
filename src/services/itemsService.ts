@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
 
@@ -11,9 +10,6 @@ export async function getItems(space_id?: string): Promise<Item[]> {
   // If space_id is provided, filter items by that space
   if (space_id) {
     query = query.eq('space_id', space_id);
-  } else {
-    // Otherwise, show items without a space (null space_id)
-    query = query.is('space_id', null);
   }
   
   const { data, error } = await query;
@@ -29,10 +25,12 @@ export async function getItems(space_id?: string): Promise<Item[]> {
     tags: item.tags || [],
     dateAdded: new Date(item.created_at),
     summary: item.summary || undefined,
-    space_id: item.space_id || undefined
+    space_id: item.space_id || undefined,
+    type: item.type || 'other'
   }));
 }
 
+// Exporting as both addItem and createItem to maintain compatibility
 export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Item> {
   // Get the current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -74,7 +72,8 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
       tags: finalItem.tags || [],
       user_id: user.id,
       summary: finalItem.summary,
-      space_id: finalItem.space_id
+      space_id: finalItem.space_id,
+      type: finalItem.type || 'other'
     })
     .select()
     .single();
@@ -90,9 +89,13 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
     summary: data.summary || undefined,
-    space_id: data.space_id || undefined
+    space_id: data.space_id || undefined,
+    type: data.type || 'other'
   };
 }
+
+// For compatibility with Index.tsx
+export const createItem = addItem;
 
 export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'dateAdded'>>): Promise<Item> {
   const updates: Record<string, any> = {};
@@ -104,6 +107,7 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
   if (item.tags !== undefined) updates.tags = item.tags;
   if (item.summary !== undefined) updates.summary = item.summary;
   if (item.space_id !== undefined) updates.space_id = item.space_id;
+  if (item.type !== undefined) updates.type = item.type;
   
   const { data, error } = await supabase
     .from('items')
@@ -123,7 +127,8 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
     summary: data.summary || undefined,
-    space_id: data.space_id || undefined
+    space_id: data.space_id || undefined,
+    type: data.type || 'other'
   };
 }
 
