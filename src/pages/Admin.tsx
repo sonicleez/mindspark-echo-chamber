@@ -82,11 +82,7 @@ const Admin = () => {
         setConfigs(data || []);
       } catch (error) {
         console.error('Error loading AI configs:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load AI configurations',
-          variant: 'destructive',
-        });
+        toast('Failed to load AI configurations');
       }
     };
     
@@ -148,17 +144,10 @@ const Admin = () => {
         is_active: config.id === configId
       })));
       
-      toast({
-        title: 'Success',
-        description: 'AI configuration updated successfully',
-      });
+      toast('AI configuration updated successfully');
     } catch (error) {
       console.error('Error activating config:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update AI configuration',
-        variant: 'destructive',
-      });
+      toast('Failed to update AI configuration');
     }
   };
   
@@ -213,17 +202,10 @@ const Admin = () => {
       }
       
       setShowDialog(false);
-      toast({
-        title: 'Success',
-        description: `AI configuration ${id ? 'updated' : 'added'} successfully`,
-      });
+      toast(`AI configuration ${id ? 'updated' : 'added'} successfully`);
     } catch (error) {
       console.error('Error saving config:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to ${editingConfig.id ? 'update' : 'add'} AI configuration`,
-        variant: 'destructive',
-      });
+      toast(`Failed to ${editingConfig.id ? 'update' : 'add'} AI configuration`);
     }
   };
   
@@ -241,17 +223,10 @@ const Admin = () => {
       // Update local state
       setConfigs(configs.filter(c => c.id !== id));
       
-      toast({
-        title: 'Success',
-        description: 'AI configuration deleted successfully',
-      });
+      toast('AI configuration deleted successfully');
     } catch (error) {
       console.error('Error deleting config:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete AI configuration',
-        variant: 'destructive',
-      });
+      toast('Failed to delete AI configuration');
     }
   };
   
