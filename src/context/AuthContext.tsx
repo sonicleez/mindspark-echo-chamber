@@ -29,12 +29,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         if (mounted) {
+          console.log('Auth state changed:', event);
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
         }
         
         // If user just signed in, redirect to home
         if (event === 'SIGNED_IN' && mounted) {
+          console.log('User signed in, redirecting to home');
           setTimeout(() => {
             navigate('/');
           }, 0);
@@ -42,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // If user just signed out, redirect to login
         if (event === 'SIGNED_OUT' && mounted) {
+          console.log('User signed out, redirecting to auth');
           setTimeout(() => {
             navigate('/auth');
           }, 0);
@@ -53,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        console.log('Current session:', data.session ? 'exists' : 'none');
         
         if (mounted) {
           setSession(data.session);
@@ -79,7 +83,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      console.log('Sign in successful');
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast.error(error.message || 'Error signing in');
       throw error;
     }
