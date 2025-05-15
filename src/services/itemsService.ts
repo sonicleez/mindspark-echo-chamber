@@ -3,9 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
 import { Database } from '@/types/database';
 
-// Cast the supabase client to use our custom Database type
-const typedSupabase = supabase as unknown as ReturnType<typeof supabase.from<Database>>;
-
 export async function getItems(): Promise<Item[]> {
   const { data, error } = await supabase
     .from('items')
