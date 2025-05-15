@@ -1,30 +1,13 @@
 
 project_id = "qkrmrlecuolwnayxbqbm"
 
-[functions.extract-metadata]
-verify_jwt = true
-
-[functions.summarize-content]
-verify_jwt = true
-
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage"]
-extra_search_path = ["public", "extensions"]
-max_rows = 1000
+schemas = ["public", "storage", "graphql_public"]
 
 [db]
 port = 54322
-shadow_port = 54320
-major_version = 15
-
-[db.pooler]
-enabled = false
-port = 54329
-pool_mode = "transaction"
-default_pool_size = 20
-max_client_conn = 100
 
 [realtime]
 enabled = true
@@ -32,12 +15,22 @@ enabled = true
 [studio]
 enabled = true
 port = 54323
-api_url = "http://localhost"
+api_url = "http://127.0.0.1"
 
-# Apply database schema migration
 [inbucket]
-enabled = false
+enabled = true
+port = 54324
 
-# Apply database schema migration
-[[migrations]]
-version = "20250515_api_keys_management"
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:5173"
+
+[functions]
+[functions.extract-metadata]
+verify_jwt = true
+
+[functions.summarize-content]
+verify_jwt = true

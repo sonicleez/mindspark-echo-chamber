@@ -7,32 +7,25 @@ import { ApiServiceType } from '@/types/apiKeys';
  */
 export async function getActiveApiKey(service: ApiServiceType): Promise<string | null> {
   try {
-    // First get the active key ID from the service configuration
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('api_services')
-      .select('active_key_id')
-      .eq('service', service)
-      .single();
-    
-    if (serviceError) throw serviceError;
-    
-    // If no active key is set, return null
-    if (!serviceData?.active_key_id) return null;
-    
-    // Get the actual key
+    // Get all API keys for the specified service
     const { data: keyData, error: keyError } = await supabase
       .from('api_keys')
-      .select('key')
-      .eq('id', serviceData.active_key_id)
+      .select('*')
+      .eq('service', service)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
     
     if (keyError) throw keyError;
     
     // Update last_used_at timestamp
-    await supabase
-      .from('api_keys')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', serviceData.active_key_id);
+    if (keyData?.id) {
+      await supabase
+        .from('api_keys')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('id', keyData.id);
+    }
     
     return keyData?.key || null;
   } catch (error) {

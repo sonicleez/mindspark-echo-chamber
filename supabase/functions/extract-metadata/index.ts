@@ -1,219 +1,155 @@
 
-// @ts-ignore
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-// @ts-ignore
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0';
-// @ts-ignore
-import { JSDOM } from 'https://jsdom.iife.deno.dev';
-// @ts-ignore
-import { DOMParser } from 'https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-async function getActiveApiKey(service: string): Promise<string | null> {
-  try {
-    // First get the active key ID from the service configuration
-    const { data: serviceData, error: serviceError } = await supabase
-      .from('api_services')
-      .select('active_key_id')
-      .eq('service', service)
-      .single();
-    
-    if (serviceError) throw serviceError;
-    
-    // If no active key is set, return null
-    if (!serviceData?.active_key_id) return null;
-    
-    // Get the actual key
-    const { data: keyData, error: keyError } = await supabase
-      .from('api_keys')
-      .select('key')
-      .eq('id', serviceData.active_key_id)
-      .single();
-    
-    if (keyError) throw keyError;
-    
-    // Update last_used_at timestamp
-    await supabase
-      .from('api_keys')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', serviceData.active_key_id);
-    
-    return keyData?.key || null;
-  } catch (error) {
-    console.error('Error fetching active API key:', error);
-    return null;
-  }
-}
-
-// Function to extract metadata from a URL using web scraping
-async function extractMetadata(url: string) {
-  try {
-    // Fetch the content of the URL
-    const response = await fetch(url);
-    const html = await response.text();
-
-    // Parse the HTML content
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
-
-    // Extract title
-    const titleTag = document.querySelector('title');
-    const title = titleTag ? titleTag.textContent.trim() : '';
-
-    // Extract description
-    const descriptionTag = document.querySelector('meta[name="description"]');
-    const description = descriptionTag ? descriptionTag.getAttribute('content') : '';
-
-    // Extract image URL
-    const ogImageTag = document.querySelector('meta[property="og:image"]');
-    const imageUrl = ogImageTag ? ogImageTag.getAttribute('content') : '';
-
-    // Extract main content for potential summarization
-    const content = extractMainContent(document);
-
-    return { title, description, imageUrl, content };
-  } catch (error) {
-    console.error('Error extracting metadata:', error);
-    return { title: '', description: '', imageUrl: '', content: '' };
-  }
-}
-
-// Helper function to extract the main content from the document
-function extractMainContent(document: any) {
-  // This is a simple implementation, real-world extraction would be more sophisticated
-  const bodyText = document.body.textContent;
-  const cleanText = bodyText
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 5000); // Limit to 5000 characters for API limits
-  return cleanText;
-}
-
-// Function to generate tags and summary using OpenAI
-async function enhanceMetadata(metadata: any) {
-  try {
-    const apiKey = await getActiveApiKey('openai') || openaiApiKey;
-    if (!apiKey) {
-      throw new Error('No OpenAI API key available');
-    }
-
-    const payload = {
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are an AI that extracts metadata from web content. Given content from a webpage, provide a concise summary and 3-5 relevant tags. Format your response as JSON with 'summary' and 'tags' fields."
-        },
-        {
-          role: "user",
-          content: `Title: ${metadata.title}\nDescription: ${metadata.description}\nContent: ${metadata.content}`
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 200
-    };
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    let enhancedData = { summary: '', tags: [] };
-
-    try {
-      const content = data.choices[0].message.content;
-      enhancedData = JSON.parse(content);
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      // Try to extract information in a more lenient way
-      const content = data.choices[0].message.content;
-      const summaryMatch = content.match(/["']?summary["']?:\s*["']([^"']*)["']/i);
-      const tagsMatch = content.match(/["']?tags["']?:\s*\[(.*?)\]/i);
-
-      if (summaryMatch && summaryMatch[1]) {
-        enhancedData.summary = summaryMatch[1];
-      }
-
-      if (tagsMatch && tagsMatch[1]) {
-        enhancedData.tags = tagsMatch[1]
-          .split(',')
-          .map((tag: string) => tag.trim().replace(/["']/g, ''))
-          .filter(Boolean);
-      }
-    }
-
-    return {
-      ...metadata,
-      summary: enhancedData.summary,
-      tags: enhancedData.tags,
-    };
-  } catch (error) {
-    console.error('Error enhancing metadata:', error);
-    return {
-      ...metadata,
-      summary: '',
-      tags: [],
-    };
-  }
-}
-
-// Main handler function
-serve(async (req: Request) => {
-  // Enable CORS
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  };
-
-  // Handle OPTIONS request for CORS
+serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { url, useOpenAiKey = false } = await req.json();
-
+    const { url, useOpenAiKey } = await req.json();
+    
     if (!url) {
-      return new Response(JSON.stringify({ error: 'URL is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: 'URL is required' }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    // Extract basic metadata from the URL
-    const metadata = await extractMetadata(url);
-    
-    // Enhance metadata with AI if content exists
-    if (metadata.content) {
-      const enhancedMetadata = await enhanceMetadata(metadata);
+    // Fetch the page content
+    const response = await fetch(url);
+    if (!response.ok) {
+      return new Response(
+        JSON.stringify({ error: `Failed to fetch URL: ${response.statusText}` }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // Get the OpenAI API key from database if useOpenAiKey is true
+    let apiKey = openAIApiKey;
+    if (useOpenAiKey) {
+      // Create a Supabase client
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') || '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+      );
       
-      return new Response(JSON.stringify(enhancedMetadata), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } else {
-      return new Response(JSON.stringify(metadata), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const { data: keyData, error: keyError } = await supabaseClient
+        .from('api_keys')
+        .select('key')
+        .eq('service', 'openai')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (!keyError && keyData?.key) {
+        apiKey = keyData.key;
+      }
+    }
+    
+    // If no API key is available, return an error
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: 'No OpenAI API key available' }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    const html = await response.text();
+    const title = extractTitle(html);
+    const description = extractDescription(html);
+    
+    // Use OpenAI to extract more relevant metadata
+    try {
+      const metadata = await extractMetadataWithAI(url, title, description, apiKey);
+      return new Response(
+        JSON.stringify(metadata),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (aiError) {
+      console.error("AI extraction failed:", aiError);
+      // Fall back to basic metadata
+      return new Response(
+        JSON.stringify({ 
+          title: title || "Unknown title", 
+          description: description || "No description available",
+          tags: []
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
   } catch (error) {
-    console.error('Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error("Error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
   }
 });
+
+function extractTitle(html: string): string | null {
+  const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+  return titleMatch ? titleMatch[1] : null;
+}
+
+function extractDescription(html: string): string | null {
+  const descMatch = html.match(/<meta name="description" content="(.*?)"/i);
+  if (descMatch) return descMatch[1];
+  
+  const ogDescMatch = html.match(/<meta property="og:description" content="(.*?)"/i);
+  return ogDescMatch ? ogDescMatch[1] : null;
+}
+
+async function extractMetadataWithAI(url: string, title: string | null, description: string | null, apiKey: string) {
+  const prompt = `
+Extract metadata from this URL: ${url}
+Title: ${title || "Unknown"}
+Description: ${description || "None"}
+
+Please provide the following in JSON format:
+1. A concise, clear title (max 100 characters)
+2. A summarized description (max 200 characters)
+3. 3-5 relevant tags as an array of strings
+`;
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'You are a metadata extraction assistant. Extract structured metadata from URLs in JSON format.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenAI API error: ${error}`);
+  }
+
+  const data = await response.json();
+  const aiResponse = JSON.parse(data.choices[0].message.content);
+  
+  return {
+    title: aiResponse.title || title || "Unknown title",
+    description: aiResponse.description || description || "No description available",
+    tags: aiResponse.tags || []
+  };
+}

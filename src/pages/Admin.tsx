@@ -7,7 +7,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 // Lazy load the admin components for better performance
 const UserManagement = React.lazy(() => import('@/components/admin/UserManagement'));
 const ApiKeyManagement = React.lazy(() => import('@/components/admin/ApiKeyManagement'));
-const AIServicesManagement = React.lazy(() => import('@/components/admin/RiveAnimationManagement'));
+const APIServiceManagement = React.lazy(() => import('@/components/admin/APIServiceManagement'));
 
 // Loading fallback component
 const TabLoader = () => (
@@ -45,7 +45,7 @@ const AdminPage: React.FC = () => {
           
           <TabsContent value="aiservices" className="mt-6">
             <Suspense fallback={<TabLoader />}>
-              <AIServicesManagement />
+              <APIServiceManagement />
             </Suspense>
           </TabsContent>
         </ErrorBoundary>
