@@ -3,15 +3,14 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ApiKeyConfig } from '@/types/apiKeys';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
@@ -34,97 +33,44 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Key, Plus, Trash2, CheckCircle } from 'lucide-react';
-
-// Define service types
-type ServiceType = 'openai' | 'perplexity' | 'anthropic' | 'google' | 'custom';
-
-// Define services with their documentation URLs
-const serviceConfigs = [
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    description: 'GPT models and other AI services',
-    url: 'https://platform.openai.com/docs/api-reference'
-  },
-  {
-    id: 'perplexity',
-    name: 'Perplexity',
-    description: 'AI language models and search',
-    url: 'https://docs.perplexity.ai/'
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic',
-    description: 'Claude AI models',
-    url: 'https://docs.anthropic.com/claude/reference/getting-started-with-the-api'
-  },
-  {
-    id: 'google',
-    name: 'Google AI',
-    description: 'Gemini and other Google AI models',
-    url: 'https://ai.google.dev/docs'
-  }
-];
+import { File, Plus, Trash2, CheckCircle } from 'lucide-react';
+import { useRive } from '@rive-app/react-canvas';
 
 const RiveAnimationManagement: React.FC = () => {
   const queryClient = useQueryClient();
-  const [selectedService, setSelectedService] = useState<ServiceType>('openai');
-  const [isAddKeyDialogOpen, setIsAddKeyDialogOpen] = useState(false);
-  const [newKeyName, setNewKeyName] = useState('');
-  const [newApiKey, setNewApiKey] = useState('');
-  const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
+  const [isAddAnimationDialogOpen, setIsAddAnimationDialogOpen] = useState(false);
+  const [newAnimationName, setNewAnimationName] = useState('');
+  const [newAnimationDescription, setNewAnimationDescription] = useState('');
+  const [newAnimationFilePath, setNewAnimationFilePath] = useState('');
+  const [animationToDelete, setAnimationToDelete] = useState<string | null>(null);
 
-  // Fetch API keys grouped by service
-  const { data: keysByService = {}, isLoading } = useQuery({
-    queryKey: ['apiKeys'],
+  // Fetch animations
+  const { data: animations = [], isLoading } = useQuery({
+    queryKey: ['riveAnimations'],
     queryFn: async () => {
-      const { data: keysData, error } = await supabase
-        .from('api_keys')
+      const { data, error } = await supabase
+        .from('rive_animations')
         .select('*');
-        
+      
       if (error) throw error;
-      
-      // Group keys by service type
-      const grouped: Record<string, ApiKeyConfig[]> = {};
-      
-      // Initialize with empty arrays for each service
-      serviceConfigs.forEach(service => {
-        grouped[service.id] = [];
-      });
-      
-      // Add keys to their service groups
-      keysData.forEach((key: ApiKeyConfig) => {
-        // If the key has a service property and that service exists in our configs
-        if (key.service && grouped[key.service]) {
-          grouped[key.service].push(key);
-        } else if (key.service) {
-          // If service exists but is not in our predefined list
-          if (!grouped['custom']) {
-            grouped['custom'] = [];
-          }
-          grouped['custom'].push(key);
-        }
-      });
-      
-      return grouped;
+      return data || [];
     }
   });
 
-  const addApiKey = useMutation({
+  const addAnimation = useMutation({
     mutationFn: async () => {
-      if (!newKeyName.trim() || !newApiKey.trim()) {
-        throw new Error('Name and API key are required');
+      if (!newAnimationName.trim() || !newAnimationFilePath.trim()) {
+        throw new Error('Name and file path are required');
       }
       
       const { data, error } = await supabase
-        .from('api_keys')
+        .from('rive_animations')
         .insert({
-          name: newKeyName.trim(),
-          key: newApiKey.trim(),
-          service: selectedService,
+          name: newAnimationName.trim(),
+          description: newAnimationDescription.trim() || null,
+          file_path: newAnimationFilePath.trim(),
           is_active: true,
-          created_by: 'system' // This should ideally be the current user's ID
+          created_by: (await supabase.auth.getUser()).data.user?.id || 'system'
         })
         .select();
         
@@ -132,256 +78,224 @@ const RiveAnimationManagement: React.FC = () => {
       return data[0];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
-      setIsAddKeyDialogOpen(false);
-      setNewKeyName('');
-      setNewApiKey('');
-      toast.success('API key added successfully');
+      queryClient.invalidateQueries({ queryKey: ['riveAnimations'] });
+      setIsAddAnimationDialogOpen(false);
+      setNewAnimationName('');
+      setNewAnimationDescription('');
+      setNewAnimationFilePath('');
+      toast.success('Animation added successfully');
     },
     onError: (error) => {
-      toast.error(`Failed to add API key: ${error.message}`);
+      toast.error(`Failed to add animation: ${error.message}`);
     }
   });
 
-  const deleteApiKey = useMutation({
-    mutationFn: async (keyId: string) => {
+  const deleteAnimation = useMutation({
+    mutationFn: async (animationId: string) => {
       const { error } = await supabase
-        .from('api_keys')
+        .from('rive_animations')
         .delete()
-        .eq('id', keyId);
+        .eq('id', animationId);
         
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
-      setKeyToDelete(null);
-      toast.success('API key deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['riveAnimations'] });
+      setAnimationToDelete(null);
+      toast.success('Animation deleted successfully');
     },
     onError: (error) => {
-      toast.error(`Failed to delete API key: ${error.message}`);
+      toast.error(`Failed to delete animation: ${error.message}`);
     }
   });
 
-  const setActiveKey = useMutation({
-    mutationFn: async (keyId: string) => {
-      // First, set all keys of this service to inactive
-      const { data: keyData, error: keyError } = await supabase
-        .from('api_keys')
-        .select('service')
-        .eq('id', keyId)
-        .single();
+  const setActiveAnimation = useMutation({
+    mutationFn: async (animationId: string) => {
+      // First, deactivate all animations
+      const { error: deactivateError } = await supabase
+        .from('rive_animations')
+        .update({ is_active: false });
         
-      if (keyError) throw keyError;
+      if (deactivateError) throw deactivateError;
       
-      const service = keyData.service;
-      
-      // Update all keys for this service to inactive
-      const { error: updateError } = await supabase
-        .from('api_keys')
-        .update({ is_active: false })
-        .eq('service', service);
-        
-      if (updateError) throw updateError;
-      
-      // Set the selected key to active
-      const { error: activeError } = await supabase
-        .from('api_keys')
+      // Then, activate the selected animation
+      const { error: activateError } = await supabase
+        .from('rive_animations')
         .update({ is_active: true })
-        .eq('id', keyId);
+        .eq('id', animationId);
         
-      if (activeError) throw activeError;
+      if (activateError) throw activateError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
-      toast.success('Active API key updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['riveAnimations'] });
+      toast.success('Active animation updated successfully');
     },
     onError: (error) => {
-      toast.error(`Failed to update active API key: ${error.message}`);
+      toast.error(`Failed to update active animation: ${error.message}`);
     }
   });
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard');
+  const handleAddAnimation = () => {
+    addAnimation.mutate();
   };
 
-  const handleAddKey = () => {
-    addApiKey.mutate();
+  const confirmDeleteAnimation = (animationId: string) => {
+    setAnimationToDelete(animationId);
   };
 
-  const confirmDeleteKey = (keyId: string) => {
-    setKeyToDelete(keyId);
-  };
-
-  const handleDeleteKey = () => {
-    if (keyToDelete) {
-      deleteApiKey.mutate(keyToDelete);
+  const handleDeleteAnimation = () => {
+    if (animationToDelete) {
+      deleteAnimation.mutate(animationToDelete);
     }
   };
 
-  const handleSetActiveKey = (keyId: string) => {
-    setActiveKey.mutate(keyId);
+  const handleSetActiveAnimation = (animationId: string) => {
+    setActiveAnimation.mutate(animationId);
   };
 
-  // Get the currently selected service configuration
-  const selectedServiceConfig = serviceConfigs.find(s => s.id === selectedService);
+  // Sample Rive Animation Preview
+  const { RiveComponent } = useRive({
+    src: '/Addnew.riv',
+    autoplay: true,
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">AI API Key Management</h2>
-        <Button onClick={() => setIsAddKeyDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add New API Key
+        <h2 className="text-2xl font-bold">Rive Animation Management</h2>
+        <Button onClick={() => setIsAddAnimationDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Add New Animation
         </Button>
       </div>
       
-      <Tabs defaultValue="openai" value={selectedService} onValueChange={value => setSelectedService(value as ServiceType)}>
-        <TabsList className="mb-4">
-          {serviceConfigs.map(service => (
-            <TabsTrigger key={service.id} value={service.id}>
-              {service.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        
-        {isLoading ? (
-          <div className="p-4 text-center">Loading API key configurations...</div>
-        ) : (
-          <>
-            {serviceConfigs.map(service => (
-              <TabsContent key={service.id} value={service.id} className="space-y-6">
-                <Card>
+      {isLoading ? (
+        <div className="p-4 text-center">Loading animations...</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {animations.length === 0 ? (
+              <p className="col-span-full text-center text-gray-500">
+                No animations configured. Add a new animation to get started.
+              </p>
+            ) : (
+              animations.map(animation => (
+                <Card key={animation.id} className="overflow-hidden">
+                  <div className="h-40 bg-gray-100 flex items-center justify-center">
+                    {animation.file_path === '/Addnew.riv' ? (
+                      <div className="h-full w-full">
+                        <RiveComponent />
+                      </div>
+                    ) : (
+                      <File className="h-12 w-12 text-gray-300" />
+                    )}
+                  </div>
                   <CardHeader>
-                    <CardTitle>{service.name}</CardTitle>
-                    <CardDescription>{service.description}</CardDescription>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">{animation.name}</CardTitle>
+                      {animation.is_active && (
+                        <Badge className="bg-green-500">Active</Badge>
+                      )}
+                    </div>
+                    <CardDescription className="text-sm">
+                      {animation.description || 'No description available'}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Documentation</h3>
-                      <a 
-                        href={service.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline"
-                      >
-                        {service.name} API Documentation
-                      </a>
-                    </div>
-                    
-                    <div className="mt-6">
-                      <h3 className="font-medium mb-2">Available API Keys</h3>
-                      {!keysByService[service.id] || keysByService[service.id].length === 0 ? (
-                        <p className="text-gray-500">No API keys configured. Add a new key to start using {service.name} API.</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {keysByService[service.id].map(key => (
-                            <div 
-                              key={key.id} 
-                              className={`p-3 border rounded-lg flex items-center justify-between ${key.is_active ? 'bg-green-50 border-green-200' : ''}`}
-                            >
-                              <div className="flex items-center space-x-3">
-                                <Key className="h-4 w-4 text-gray-500" />
-                                <div>
-                                  <div className="font-medium">{key.name}</div>
-                                  <div className="text-xs text-gray-500">
-                                    Created: {new Date(key.created_at).toLocaleDateString()}
-                                  </div>
-                                </div>
-                                {key.is_active && (
-                                  <Badge className="bg-green-500">Active</Badge>
-                                )}
-                              </div>
-                              <div className="flex space-x-2">
-                                {!key.is_active && (
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => handleSetActiveKey(key.id)}
-                                  >
-                                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                                    Set Active
-                                  </Button>
-                                )}
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => copyToClipboard(key.key)}
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                  <span className="sr-only">Copy</span>
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  className="text-red-500 hover:bg-red-50"
-                                  onClick={() => confirmDeleteKey(key.id)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  <span className="sr-only">Delete</span>
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500">
+                        Created: {new Date(animation.created_at).toLocaleDateString()}
+                      </div>
+                      <div className="flex space-x-2">
+                        {!animation.is_active && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleSetActiveAnimation(animation.id)}
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                            Set Active
+                          </Button>
+                        )}
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-red-500 hover:bg-red-50"
+                          onClick={() => confirmDeleteAnimation(animation.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-            ))}
-          </>
-        )}
-      </Tabs>
+              ))
+            )}
+          </div>
+        </>
+      )}
       
-      {/* Add API Key Dialog */}
-      <Dialog open={isAddKeyDialogOpen} onOpenChange={setIsAddKeyDialogOpen}>
+      {/* Add Animation Dialog */}
+      <Dialog open={isAddAnimationDialogOpen} onOpenChange={setIsAddAnimationDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New API Key</DialogTitle>
+            <DialogTitle>Add New Rive Animation</DialogTitle>
             <DialogDescription>
-              Add a new API key for {selectedServiceConfig?.name || 'selected service'}.
+              Add a new Rive animation to your application.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label htmlFor="keyName" className="text-sm font-medium">Key Name</label>
+              <label htmlFor="animationName" className="text-sm font-medium">Animation Name</label>
               <Input
-                id="keyName"
-                placeholder="My API Key"
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
+                id="animationName"
+                placeholder="My Animation"
+                value={newAnimationName}
+                onChange={(e) => setNewAnimationName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="apiKey" className="text-sm font-medium">API Key</label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="Enter the API key"
-                value={newApiKey}
-                onChange={(e) => setNewApiKey(e.target.value)}
+              <label htmlFor="description" className="text-sm font-medium">Description</label>
+              <Textarea
+                id="description"
+                placeholder="Describe the animation"
+                value={newAnimationDescription}
+                onChange={(e) => setNewAnimationDescription(e.target.value)}
+                className="min-h-[80px]"
               />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="filePath" className="text-sm font-medium">File Path</label>
+              <Input
+                id="filePath"
+                placeholder="/path/to/animation.riv"
+                value={newAnimationFilePath}
+                onChange={(e) => setNewAnimationFilePath(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                For testing purposes, you can use "/Addnew.riv" which is included in the project.
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddKeyDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddKey} disabled={!newKeyName || !newApiKey}>Add Key</Button>
+            <Button variant="outline" onClick={() => setIsAddAnimationDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddAnimation} disabled={!newAnimationName || !newAnimationFilePath}>Add Animation</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!keyToDelete} onOpenChange={(open) => !open && setKeyToDelete(null)}>
+      <AlertDialog open={!!animationToDelete} onOpenChange={(open) => !open && setAnimationToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm deletion</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this API key? This action cannot be undone.
+              Are you sure you want to delete this animation? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteKey} className="bg-red-500 hover:bg-red-600">
+            <AlertDialogAction onClick={handleDeleteAnimation} className="bg-red-500 hover:bg-red-600">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

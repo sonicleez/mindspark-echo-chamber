@@ -39,31 +39,31 @@ import { Copy, Key, Plus, Trash2, CheckCircle } from 'lucide-react';
 // Define service information locally since we don't have an api_services table
 const serviceDefinitions = [
   { 
-    service: 'openai' as ApiServiceType, 
+    id: 'openai',
     name: 'OpenAI', 
     description: 'API for accessing powerful language models like GPT-4',
     url: 'https://platform.openai.com/docs/api-reference'
   },
   { 
-    service: 'perplexity' as ApiServiceType, 
+    id: 'perplexity',
     name: 'Perplexity AI',
     description: 'Access advanced AI models for document understanding and generation',
     url: 'https://docs.perplexity.ai'
   },
   { 
-    service: 'anthropic' as ApiServiceType,
+    id: 'anthropic',
     name: 'Anthropic Claude',
     description: 'Claude AI models for natural language understanding and generation',
     url: 'https://docs.anthropic.com/claude/reference/getting-started-with-the-api'
   },
   { 
-    service: 'google' as ApiServiceType,
+    id: 'google',
     name: 'Google AI',
     description: 'Google Gemini and other AI models for various tasks',
     url: 'https://ai.google.dev/docs'
   },
   { 
-    service: 'custom' as ApiServiceType,
+    id: 'custom',
     name: 'Custom API',
     description: 'Custom API integrations for specialized needs',
     url: 'https://example.com/api-docs'
@@ -72,7 +72,7 @@ const serviceDefinitions = [
 
 const APIServiceManagement: React.FC = () => {
   const queryClient = useQueryClient();
-  const [selectedService, setSelectedService] = useState<ApiServiceType>('openai');
+  const [selectedService, setSelectedService] = useState<string>('openai');
   const [isAddKeyDialogOpen, setIsAddKeyDialogOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [newApiKey, setNewApiKey] = useState('');
@@ -87,14 +87,24 @@ const APIServiceManagement: React.FC = () => {
         .select('*');
       
       if (error) throw error;
-      return data || [];
+      
+      // Add default service if it doesn't exist
+      return (data || []).map(key => ({
+        ...key,
+        service: key.service || 'openai'
+      }));
     }
   });
 
   // Group API keys by service
   const apiServices = serviceDefinitions.map(serviceDef => {
-    const serviceKeys = apiKeys.filter(key => key.service === serviceDef.service);
-    // Find the active key (using the first active key found)
+    const serviceId = serviceDef.id;
+    // Filter keys by service, handling the case where service might not exist
+    const serviceKeys = apiKeys.filter(key => 
+      (key.service || 'openai') === serviceId
+    );
+    
+    // Find the active key
     const activeKey = serviceKeys.find(key => key.is_active === true);
     
     return {
@@ -112,7 +122,7 @@ const APIServiceManagement: React.FC = () => {
       
       // Look for existing active keys for this service
       const existingActiveKeys = apiKeys.filter(
-        key => key.service === selectedService && key.is_active === true
+        key => (key.service || 'openai') === selectedService && key.is_active === true
       );
       
       const { data, error } = await supabase
@@ -120,9 +130,8 @@ const APIServiceManagement: React.FC = () => {
         .insert({
           name: newKeyName.trim(),
           key: newApiKey.trim(),
-          service: selectedService,
           is_active: existingActiveKeys.length === 0, // Make active only if no other active key exists
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: (await supabase.auth.getUser()).data.user?.id || 'system'
         })
         .select();
         
@@ -162,11 +171,11 @@ const APIServiceManagement: React.FC = () => {
 
   const setActiveKey = useMutation({
     mutationFn: async ({ keyId }: { keyId: string }) => {
-      // Get the key to activate to determine its service
+      // Get the key to activate
       const keyToActivate = apiKeys.find(key => key.id === keyId);
       if (!keyToActivate) throw new Error("Key not found");
       
-      const serviceType = keyToActivate.service;
+      const serviceType = keyToActivate.service || 'openai';
       
       // First, deactivate all keys for this service
       const { error: deactivateError } = await supabase
@@ -174,7 +183,14 @@ const APIServiceManagement: React.FC = () => {
         .update({ is_active: false })
         .eq('service', serviceType);
         
-      if (deactivateError) throw deactivateError;
+      if (deactivateError) {
+        // If service column doesn't exist yet, deactivate all keys
+        const { error: fallbackError } = await supabase
+          .from('api_keys')
+          .update({ is_active: false });
+          
+        if (fallbackError) throw fallbackError;
+      }
       
       // Then, activate the selected key
       const { error: activateError } = await supabase
@@ -216,7 +232,7 @@ const APIServiceManagement: React.FC = () => {
     setActiveKey.mutate({ keyId });
   };
 
-  const selectedServiceConfig = apiServices.find(s => s.service === selectedService);
+  const selectedServiceConfig = apiServices.find(s => s.id === selectedService);
 
   return (
     <div className="space-y-6">
@@ -227,10 +243,10 @@ const APIServiceManagement: React.FC = () => {
         </Button>
       </div>
       
-      <Tabs defaultValue="openai" value={selectedService} onValueChange={(value) => setSelectedService(value as ApiServiceType)}>
+      <Tabs defaultValue="openai" value={selectedService} onValueChange={(value) => setSelectedService(value)}>
         <TabsList className="mb-4">
           {apiServices.map(service => (
-            <TabsTrigger key={service.service} value={service.service}>
+            <TabsTrigger key={service.id} value={service.id}>
               {service.name}
             </TabsTrigger>
           ))}
@@ -241,7 +257,7 @@ const APIServiceManagement: React.FC = () => {
         ) : (
           <>
             {apiServices.map(service => (
-              <TabsContent key={service.service} value={service.service} className="space-y-6">
+              <TabsContent key={service.id} value={service.id} className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>{service.name}</CardTitle>
