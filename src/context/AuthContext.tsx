@@ -23,32 +23,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        if (mounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+        }
         
         // If user just signed in, redirect to home
-        if (event === 'SIGNED_IN') {
-          navigate('/');
+        if (event === 'SIGNED_IN' && mounted) {
+          setTimeout(() => {
+            navigate('/');
+          }, 0);
         }
         
         // If user just signed out, redirect to login
-        if (event === 'SIGNED_OUT') {
-          navigate('/auth');
+        if (event === 'SIGNED_OUT' && mounted) {
+          setTimeout(() => {
+            navigate('/auth');
+          }, 0);
         }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setSession(data.session);
+          setUser(data.session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error loading auth session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const signIn = async (email: string, password: string) => {

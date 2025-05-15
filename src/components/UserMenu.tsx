@@ -19,8 +19,10 @@ const UserMenu = () => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const checkAdminRole = async () => {
-      if (!user) return;
+      if (!user?.id) return;
       
       try {
         const { data, error } = await supabase
@@ -30,7 +32,7 @@ const UserMenu = () => {
           .eq('role', 'admin')
           .single();
         
-        if (!error && data) {
+        if (!error && data && isMounted) {
           setIsAdmin(true);
         }
       } catch (error) {
@@ -38,8 +40,14 @@ const UserMenu = () => {
       }
     };
     
-    checkAdminRole();
-  }, [user]);
+    if (user?.id) {
+      checkAdminRole();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   if (!user) return null;
 
