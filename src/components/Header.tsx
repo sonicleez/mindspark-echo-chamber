@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import UserMenu from './UserMenu';
-import { useRive } from '@rive-app/react-canvas';
 import { toast } from 'sonner';
+import { Button } from './ui/button';
 
 interface HeaderProps {
   onAddItem: () => void;
@@ -13,89 +13,14 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   const [searchFocused, setSearchFocused] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
   
-  // Use the new animation file URL 
-  const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747294148769_Addnew2.riv';
-  
-  // Use Rive without state machine inputs initially to avoid errors
-  const { RiveComponent, rive } = useRive({
-    src: riveAnimationUrl,
-    artboard: 'New Artboard',
-    stateMachines: 'State Machine 1',
-    autoplay: true,
-  });
-  
-  // Apply state inputs after rive is loaded
-  useEffect(() => {
-    if (rive) {
-      try {
-        // First check if the state machine exists using stateMachineNames
-        const stateMachines = rive.stateMachineNames;
-        
-        if (stateMachines && stateMachines.includes('State Machine 1')) {
-          // Get the inputs for this state machine
-          const inputs = rive.stateMachineInputs('State Machine 1');
-          
-          // Find the hover and pressed inputs
-          const hoverInput = inputs.find(input => input.name === 'hover');
-          const pressedInput = inputs.find(input => input.name === 'pressed');
-          
-          // Set the values if inputs exist - using the correct method for the Rive API
-          if (hoverInput) {
-            // Access the input object directly through the state machine
-            const stateMachine = rive.stateMachineInstance('State Machine 1');
-            if (stateMachine) {
-              stateMachine.setBool('hover', isHovering);
-            }
-          }
-          
-          if (pressedInput) {
-            const stateMachine = rive.stateMachineInstance('State Machine 1');
-            if (stateMachine) {
-              stateMachine.setBool('pressed', isPressed);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error setting Rive animation inputs:', error);
-      }
-    }
-  }, [rive, isHovering, isPressed]);
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
   };
 
-  // Handle the Add button interactions
   const handleAddButtonClick = () => {
-    setIsPressed(true);
-    
-    // Add a delay before calling onAddItem to allow animation to play
-    setTimeout(() => {
-      setIsPressed(false);
-      onAddItem();
-      toast.success("Bắt đầu thêm mục mới");
-    }, 300);
-  };
-
-  // Event handler functions for mouse interactions
-  const handleMouseEnter = () => {
-    setIsHovering(true);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovering(false);
-    setIsPressed(false);
-  };
-
-  const handleMouseDown = () => {
-    setIsPressed(true);
-  };
-
-  const handleMouseUp = () => {
-    setIsPressed(false);
+    onAddItem();
+    toast.success("Bắt đầu thêm mục mới");
   };
 
   return (
@@ -120,27 +45,13 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         </div>
         
         <div className="flex items-center gap-3">
-          <div 
-            className="cursor-pointer relative"
+          <Button 
             onClick={handleAddButtonClick}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            style={{ 
-              width: '110px', 
-              height: '40px',
-            }}
+            className="bg-[#9b87f5] hover:bg-[#8a76e4] text-white flex items-center gap-1 transition-colors"
           >
-            <div className="absolute inset-0">
-              {rive && <RiveComponent />}
-            </div>
-            <span 
-              className="absolute inset-0 flex items-center justify-center text-white font-medium z-10 hidden sm:flex"
-            >
-              Add New
-            </span>
-          </div>
+            <Plus className="h-4 w-4" /> 
+            <span className="hidden sm:inline">Add New</span>
+          </Button>
           <UserMenu />
         </div>
       </div>
