@@ -12,10 +12,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
-  const [isHovering, setIsHovering] = useState(false);
-  
   const { RiveComponent, rive } = useRive({
-    src: 'https://rive.app/s/LevuX-GdcU_onEuVgwPn3g/embed?runtime=rive-renderer',
+    src: 'https://rive.app/s/LevuX-GdcU_onEuVgwPn3g/embed',
     autoplay: true,
     stateMachines: 'State Machine 1',
   });
@@ -26,6 +24,7 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
 
   const handleAddClick = () => {
     if (rive) {
+      // Trigger animation play
       rive.play();
     }
     onAddItem();
@@ -55,11 +54,9 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
             onClick={handleAddClick}
             variant="ghost" 
             className="p-2 hover:bg-[#333] text-white flex items-center"
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
           >
-            <div className="h-5 w-5 mr-2">
-              <RiveComponent className="h-5 w-5" />
+            <div className="h-5 w-5">
+              <RiveComponent />
             </div>
             <span className="ml-2 hidden sm:inline">Add New</span>
           </Button>
