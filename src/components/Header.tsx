@@ -1,12 +1,9 @@
 
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import UserMenu from './UserMenu';
 import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface HeaderProps {
@@ -96,17 +93,34 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         
         <div className="flex items-center gap-3">
           <div 
+            className="rive-button-container flex items-center cursor-pointer"
             onClick={handleAddButtonClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
-            className="relative h-10 cursor-pointer rounded-full bg-[#9b87f5] px-5 flex items-center hover:bg-[#7E69AB] transition-colors shadow-lg shadow-[#9b87f5]/20"
+            style={{ 
+              height: '40px', 
+              minWidth: '110px',
+              position: 'relative' 
+            }}
           >
-            <div className="h-8 w-8 mr-1 flex items-center justify-center">
-              <RiveComponent />
-            </div>
-            <span className="text-white font-medium hidden sm:block">Add New</span>
+            <RiveComponent 
+              className="w-full h-full"
+              style={{ 
+                position: 'absolute',
+                top: '0',
+                left: '0',
+                width: '100%',
+                height: '100%'
+              }} 
+            />
+            <span 
+              className="text-white font-medium hidden sm:block z-10 pl-10 pr-2"
+              style={{ position: 'relative' }}
+            >
+              Add New
+            </span>
           </div>
           <UserMenu />
         </div>
