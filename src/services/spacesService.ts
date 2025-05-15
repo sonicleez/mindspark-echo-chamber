@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 export interface Space {
   id: string;
@@ -25,11 +26,19 @@ export async function getSpaces(): Promise<Space[]> {
 }
 
 export async function createSpace(space: { name: string; description?: string }): Promise<Space> {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated to create a space');
+  }
+  
   const { data, error } = await supabase
     .from('spaces')
     .insert({
       name: space.name,
-      description: space.description
+      description: space.description,
+      user_id: user.id // Add the user_id from the authenticated user
     })
     .select()
     .single();
