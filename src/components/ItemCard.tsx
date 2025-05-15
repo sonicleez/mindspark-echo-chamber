@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExternalLink } from 'lucide-react';
@@ -10,7 +11,7 @@ export interface Item {
   url?: string;
   tags?: string[];
   dateAdded: Date;
-  summary?: string; // Add this new field
+  summary?: string;
 }
 
 interface ItemCardProps {

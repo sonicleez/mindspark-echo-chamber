@@ -18,7 +18,7 @@ export async function getItems(): Promise<Item[]> {
     url: item.url || undefined,
     tags: item.tags || [],
     dateAdded: new Date(item.created_at),
-    summary: item.summary || undefined
+    summary: item.summary || undefined // Handle the summary field, even if it doesn't exist in DB yet
   }));
 }
 
@@ -54,7 +54,7 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
     url: data.url || undefined,
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined // Include summary in returned object
+    summary: data.summary || undefined // Handle the summary field
   };
 }
 
@@ -85,7 +85,7 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
     url: data.url || undefined,
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined // Include summary in returned object
+    summary: data.summary || undefined // Handle the summary field
   };
 }
 
