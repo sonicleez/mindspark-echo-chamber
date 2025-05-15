@@ -13,7 +13,7 @@ import {
 import { User, Settings, LogOut, Lock, UserCircle } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 const UserMenu = () => {
   const { user, signOut } = useAuth();
@@ -32,7 +32,7 @@ const UserMenu = () => {
       }
       
       try {
-        console.log('Checking admin role for user:', user.id);
+        console.log('UserMenu: Checking admin role for user:', user.id);
         
         const { data, error } = await supabase
           .from('admin_roles')
@@ -40,10 +40,10 @@ const UserMenu = () => {
           .eq('user_id', user.id)
           .eq('role', 'admin');
         
-        console.log('Admin role check result:', { data, error });
+        console.log('UserMenu: Admin role check result:', { data, error });
         
         if (error) {
-          console.error('Error checking admin role:', error);
+          console.error('UserMenu: Error checking admin role:', error);
           if (isMounted) {
             setIsAdmin(false);
             setIsCheckingRole(false);
@@ -56,7 +56,7 @@ const UserMenu = () => {
           setIsCheckingRole(false);
         }
       } catch (error) {
-        console.error('Error checking admin role:', error);
+        console.error('UserMenu: Error checking admin role:', error);
         if (isMounted) {
           setIsAdmin(false);
           setIsCheckingRole(false);
@@ -64,14 +64,14 @@ const UserMenu = () => {
       }
     };
     
-    // Add a small delay to ensure user is properly loaded
+    // Add a longer delay to ensure user is properly loaded
     const timer = setTimeout(() => {
       if (user?.id) {
         checkAdminRole();
       } else {
         setIsCheckingRole(false);
       }
-    }, 500);
+    }, 800);
     
     return () => {
       isMounted = false;

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookmarkPlus, Search } from "lucide-react";
 import UserMenu from './UserMenu';
+import AdminMenu from './AdminMenu';
 
 interface HeaderProps {
   onAddItem: () => void;
@@ -35,6 +36,7 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         </div>
         
         <div className="flex items-center gap-2">
+          <AdminMenu />
           <Button 
             onClick={onAddItem}
             variant="ghost" 

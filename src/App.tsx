@@ -12,6 +12,7 @@ import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
+import AdminLayout from "./layouts/AdminLayout";
 
 const queryClient = new QueryClient();
 
@@ -29,9 +30,14 @@ const App = () => (
             {/* Protected routes */}
             <Route element={<RequireAuth />}>
               <Route path="/" element={<Index />} />
-              <Route path="/admin" element={<Admin />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
+              
+              {/* Admin routes with layout */}
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<Admin />} />
+                {/* Add more admin routes here */}
+              </Route>
             </Route>
             
             {/* Catch-all route */}
