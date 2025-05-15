@@ -28,30 +28,33 @@ const UserManagement: React.FC = () => {
     queryKey: ['adminUsers'],
     queryFn: async () => {
       try {
-        // Fetch profiles directly with their email addresses
+        // First fetch profiles
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, username, is_admin, created_at, auth.users!inner(email)')
-          .returns<Array<{
-            id: string;
-            username: string | null;
-            is_admin: boolean;
-            created_at: string;
-            auth: { users: { email: string } }
-          }>>(); // Type assertion to help TypeScript understand the structure
+          .select('id, username, is_admin, created_at');
         
         if (profilesError) throw profilesError;
         
         if (!profiles) return [];
         
-        // Transform the data structure to match our component's expectations
-        return profiles.map(profile => ({
-          id: profile.id,
-          email: profile?.auth?.users?.email || 'N/A',
-          username: profile.username,
-          is_admin: profile.is_admin || false,
-          created_at: profile.created_at
-        }));
+        // Then fetch emails separately for each user
+        const usersWithEmails: UserProfile[] = [];
+        
+        for (const profile of profiles) {
+          // Get user email from auth table if possible
+          const { data: userData, error: userError } = await supabase.auth.admin
+            .getUserById(profile.id);
+            
+          usersWithEmails.push({
+            id: profile.id,
+            email: userData?.user?.email || null,
+            username: profile.username,
+            is_admin: profile.is_admin || false,
+            created_at: profile.created_at
+          });
+        }
+        
+        return usersWithEmails;
       } catch (error) {
         console.error('Error fetching users:', error);
         throw error;
@@ -128,7 +131,7 @@ const UserManagement: React.FC = () => {
             ) : (
               filteredUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.email || 'N/A'}</TableCell>
                   <TableCell>{user.username || 'N/A'}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
