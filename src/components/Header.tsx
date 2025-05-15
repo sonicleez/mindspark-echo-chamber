@@ -89,20 +89,19 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button 
+          <div 
             onClick={handleAddButtonClick}
-            variant="ghost" 
-            className="p-2 hover:bg-[#333] text-white flex items-center"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
+            className="relative h-10 cursor-pointer rounded-full bg-[#9b87f5] px-5 flex items-center hover:bg-[#7E69AB] transition-colors"
           >
-            <div className="h-8 w-8 flex items-center justify-center">
+            <div className="h-8 w-8 mr-1 flex items-center justify-center">
               <RiveComponent />
             </div>
-            <span className="ml-2 hidden sm:inline">Add New</span>
-          </Button>
+            <span className="text-white font-medium hidden sm:block">Add New</span>
+          </div>
           <UserMenu />
         </div>
       </div>
