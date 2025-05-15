@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
 
-export async function getItems(space_id?: string): Promise<Item[]> {
+export async function getItems(space_id?: string | null): Promise<Item[]> {
   let query = supabase
     .from('items')
     .select('*')

@@ -33,10 +33,16 @@ const Index: React.FC = () => {
     queryFn: getSpaces,
   });
   
-  const { data: items = [], isLoading: isLoadingItems } = useQuery({
+  const { data: itemsData = [], isLoading: isLoadingItems } = useQuery({
     queryKey: ['items', currentSpaceId],
     queryFn: () => getItems(currentSpaceId),
   });
+  
+  // Convert any string dates to Date objects to ensure type compatibility
+  const items: Item[] = itemsData.map(item => ({
+    ...item,
+    dateAdded: item.dateAdded instanceof Date ? item.dateAdded : new Date(item.dateAdded)
+  }));
   
   // Mutations
   const addItemMutation = useMutation({
