@@ -28,15 +28,13 @@ const Settings = () => {
       
       if (error) throw error;
       
-      toast({
-        title: "Email update initiated",
+      toast("Email update initiated", {
         description: "Please check your new email for a confirmation link.",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error updating email",
+      toast("Error updating email", {
         description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -54,17 +52,15 @@ const Settings = () => {
       
       if (error) throw error;
       
-      toast({
-        title: "Password updated",
+      toast("Password updated", {
         description: "Your password has been successfully updated.",
       });
       setCurrentPassword('');
       setNewPassword('');
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error updating password",
+      toast("Error updating password", {
         description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
