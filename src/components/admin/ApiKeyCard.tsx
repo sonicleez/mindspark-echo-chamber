@@ -3,11 +3,11 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Key, Copy, Trash2, CheckCircle } from 'lucide-react';
-import { ApiKey } from '@/types/apiKeys';
+import { ApiKeyConfig } from '@/types/apiKeys';
 import { toast } from 'sonner';
 
 interface ApiKeyCardProps {
-  apiKey: ApiKey;
+  apiKey: ApiKeyConfig;
   isActive: boolean;
   onDelete: (keyId: string) => void;
   onSetActive: (keyId: string) => void;

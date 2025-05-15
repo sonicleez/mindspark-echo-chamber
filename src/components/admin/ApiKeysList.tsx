@@ -3,11 +3,11 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import ApiKeyCard from './ApiKeyCard';
-import { ApiKey } from '@/types/apiKeys';
+import { ApiKeyConfig } from '@/types/apiKeys';
 
 interface ApiKeysListProps {
   serviceName: string;
-  keys: ApiKey[];
+  keys: ApiKeyConfig[];
   activeKeyId: string | null;
   onAddKey: () => void;
   onDeleteKey: (keyId: string) => void;
