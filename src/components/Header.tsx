@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -12,6 +12,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
+  // Configure Rive with autoplay set to false so we can control it
   const { RiveComponent, rive } = useRive({
     src: 'https://rive.app/s/LevuX-GdcU_onEuVgwPn3g/embed',
     autoplay: false,
@@ -22,16 +23,18 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
     onSearch(e.target.value);
   };
 
+  // Handle the Add button click with animation
   const handleAddClick = () => {
     if (rive) {
-      // Trigger animation play
+      // Play the animation first
       rive.play();
       
-      // Call the onAddItem function after a slight delay to allow animation to play
+      // Add a delay before calling onAddItem to allow animation to play
       setTimeout(() => {
         onAddItem();
       }, 300);
     } else {
+      // Fallback if rive isn't loaded
       onAddItem();
     }
   };
