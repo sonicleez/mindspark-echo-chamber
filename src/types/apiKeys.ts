@@ -16,6 +16,5 @@ export interface ApiServiceConfig {
   name: string;
   description: string;
   url: string;
-  active_key_id: string | null;
   keys: ApiKeyConfig[];
 }

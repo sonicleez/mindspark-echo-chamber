@@ -121,7 +121,8 @@ const APIServiceManagement: React.FC = () => {
           name: newKeyName.trim(),
           key: newApiKey.trim(),
           service: selectedService,
-          is_active: existingActiveKeys.length === 0 // Make active only if no other active key exists
+          is_active: existingActiveKeys.length === 0, // Make active only if no other active key exists
+          created_by: (await supabase.auth.getUser()).data.user?.id
         })
         .select();
         
@@ -160,7 +161,13 @@ const APIServiceManagement: React.FC = () => {
   });
 
   const setActiveKey = useMutation({
-    mutationFn: async ({ serviceType, keyId }: { serviceType: ApiServiceType, keyId: string }) => {
+    mutationFn: async ({ keyId }: { keyId: string }) => {
+      // Get the key to activate to determine its service
+      const keyToActivate = apiKeys.find(key => key.id === keyId);
+      if (!keyToActivate) throw new Error("Key not found");
+      
+      const serviceType = keyToActivate.service;
+      
       // First, deactivate all keys for this service
       const { error: deactivateError } = await supabase
         .from('api_keys')
@@ -205,8 +212,8 @@ const APIServiceManagement: React.FC = () => {
     }
   };
 
-  const handleSetActiveKey = (serviceType: ApiServiceType, keyId: string) => {
-    setActiveKey.mutate({ serviceType, keyId });
+  const handleSetActiveKey = (keyId: string) => {
+    setActiveKey.mutate({ keyId });
   };
 
   const selectedServiceConfig = apiServices.find(s => s.service === selectedService);
@@ -281,7 +288,7 @@ const APIServiceManagement: React.FC = () => {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => handleSetActiveKey(service.service, key.id)}
+                                    onClick={() => handleSetActiveKey(key.id)}
                                   >
                                     <CheckCircle className="h-3.5 w-3.5 mr-1" />
                                     Set Active
