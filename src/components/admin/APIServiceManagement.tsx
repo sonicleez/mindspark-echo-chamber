@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ApiServiceType, ApiKeyConfig } from '@/types/apiKeys';
+import { ApiServiceType } from '@/types/apiKeys';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,50 +36,48 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Copy, Key, Plus, Trash2, CheckCircle } from 'lucide-react';
 
-// Define service information locally since we don't have an api_services table
-const serviceDefinitions = [
-  { 
-    id: 'openai',
-    name: 'OpenAI', 
-    description: 'API for accessing powerful language models like GPT-4',
-    url: 'https://platform.openai.com/docs/api-reference'
-  },
-  { 
-    id: 'perplexity',
-    name: 'Perplexity AI',
-    description: 'Access advanced AI models for document understanding and generation',
-    url: 'https://docs.perplexity.ai'
-  },
-  { 
-    id: 'anthropic',
-    name: 'Anthropic Claude',
-    description: 'Claude AI models for natural language understanding and generation',
-    url: 'https://docs.anthropic.com/claude/reference/getting-started-with-the-api'
-  },
-  { 
-    id: 'google',
-    name: 'Google AI',
-    description: 'Google Gemini and other AI models for various tasks',
-    url: 'https://ai.google.dev/docs'
-  },
-  { 
-    id: 'custom',
-    name: 'Custom API',
-    description: 'Custom API integrations for specialized needs',
-    url: 'https://example.com/api-docs'
-  }
-];
+interface ApiService {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  active_key_id?: string | null;
+  keys: ApiKey[];
+}
+
+interface ApiKey {
+  id: string;
+  name: string;
+  key: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at: string | null;
+  service: ApiServiceType;
+}
 
 const APIServiceManagement: React.FC = () => {
   const queryClient = useQueryClient();
-  const [selectedService, setSelectedService] = useState<string>('openai');
+  const [selectedService, setSelectedService] = useState<ApiServiceType>('openai');
   const [isAddKeyDialogOpen, setIsAddKeyDialogOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [newApiKey, setNewApiKey] = useState('');
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
 
+  // Fetch API services
+  const { data: services = [], isLoading: isLoadingServices } = useQuery({
+    queryKey: ['apiServices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('api_services')
+        .select('*');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   // Fetch API keys
-  const { data: apiKeys = [], isLoading } = useQuery({
+  const { data: apiKeys = [], isLoading: isLoadingKeys } = useQuery({
     queryKey: ['apiKeys'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -88,21 +86,18 @@ const APIServiceManagement: React.FC = () => {
       
       if (error) throw error;
       
-      // Add default service if it doesn't exist
       return (data || []).map(key => ({
         ...key,
-        service: key.service || 'openai'
+        service: key.service || 'openai' as ApiServiceType
       }));
     }
   });
 
   // Group API keys by service
-  const apiServices = serviceDefinitions.map(serviceDef => {
-    const serviceId = serviceDef.id;
-    // Filter keys by service, handling the case where service might not exist
-    const serviceKeys = apiKeys.filter(key => 
-      (key.service || 'openai') === serviceId
-    );
+  const apiServices = services.map(serviceDef => {
+    const serviceId = serviceDef.service as ApiServiceType;
+    // Filter keys by service
+    const serviceKeys = apiKeys.filter(key => key.service === serviceId);
     
     // Find the active key
     const activeKey = serviceKeys.find(key => key.is_active === true);
@@ -122,7 +117,7 @@ const APIServiceManagement: React.FC = () => {
       
       // Look for existing active keys for this service
       const existingActiveKeys = apiKeys.filter(
-        key => (key.service || 'openai') === selectedService && key.is_active === true
+        key => key.service === selectedService && key.is_active === true
       );
       
       const { data, error } = await supabase
@@ -130,6 +125,7 @@ const APIServiceManagement: React.FC = () => {
         .insert({
           name: newKeyName.trim(),
           key: newApiKey.trim(),
+          service: selectedService,
           is_active: existingActiveKeys.length === 0, // Make active only if no other active key exists
           created_by: (await supabase.auth.getUser()).data.user?.id || 'system'
         })
@@ -175,7 +171,7 @@ const APIServiceManagement: React.FC = () => {
       const keyToActivate = apiKeys.find(key => key.id === keyId);
       if (!keyToActivate) throw new Error("Key not found");
       
-      const serviceType = keyToActivate.service || 'openai';
+      const serviceType = keyToActivate.service;
       
       // First, deactivate all keys for this service
       const { error: deactivateError } = await supabase
@@ -183,14 +179,7 @@ const APIServiceManagement: React.FC = () => {
         .update({ is_active: false })
         .eq('service', serviceType);
         
-      if (deactivateError) {
-        // If service column doesn't exist yet, deactivate all keys
-        const { error: fallbackError } = await supabase
-          .from('api_keys')
-          .update({ is_active: false });
-          
-        if (fallbackError) throw fallbackError;
-      }
+      if (deactivateError) throw deactivateError;
       
       // Then, activate the selected key
       const { error: activateError } = await supabase
@@ -232,7 +221,8 @@ const APIServiceManagement: React.FC = () => {
     setActiveKey.mutate({ keyId });
   };
 
-  const selectedServiceConfig = apiServices.find(s => s.id === selectedService);
+  const selectedServiceConfig = apiServices.find(s => s.service === selectedService);
+  const isLoading = isLoadingServices || isLoadingKeys;
 
   return (
     <div className="space-y-6">
@@ -243,10 +233,10 @@ const APIServiceManagement: React.FC = () => {
         </Button>
       </div>
       
-      <Tabs defaultValue="openai" value={selectedService} onValueChange={(value) => setSelectedService(value)}>
+      <Tabs defaultValue="openai" value={selectedService} onValueChange={(value) => setSelectedService(value as ApiServiceType)}>
         <TabsList className="mb-4">
           {apiServices.map(service => (
-            <TabsTrigger key={service.id} value={service.id}>
+            <TabsTrigger key={service.service} value={service.service}>
               {service.name}
             </TabsTrigger>
           ))}
@@ -257,7 +247,7 @@ const APIServiceManagement: React.FC = () => {
         ) : (
           <>
             {apiServices.map(service => (
-              <TabsContent key={service.id} value={service.id} className="space-y-6">
+              <TabsContent key={service.service} value={service.service} className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>{service.name}</CardTitle>

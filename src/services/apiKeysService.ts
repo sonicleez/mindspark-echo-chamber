@@ -11,6 +11,7 @@ export async function getActiveApiKey(service: ApiServiceType): Promise<string |
     const { data: keyData, error: keyError } = await supabase
       .from('api_keys')
       .select('*')
+      .eq('service', service)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)

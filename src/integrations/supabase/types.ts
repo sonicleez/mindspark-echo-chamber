@@ -19,6 +19,7 @@ export type Database = {
           key: string
           last_used_at: string | null
           name: string
+          service: Database["public"]["Enums"]["api_service_type"]
         }
         Insert: {
           created_at?: string
@@ -29,6 +30,7 @@ export type Database = {
           key: string
           last_used_at?: string | null
           name: string
+          service?: Database["public"]["Enums"]["api_service_type"]
         }
         Update: {
           created_at?: string
@@ -39,6 +41,31 @@ export type Database = {
           key?: string
           last_used_at?: string | null
           name?: string
+          service?: Database["public"]["Enums"]["api_service_type"]
+        }
+        Relationships: []
+      }
+      api_services: {
+        Row: {
+          created_at: string
+          description: string
+          name: string
+          service: Database["public"]["Enums"]["api_service_type"]
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          name: string
+          service: Database["public"]["Enums"]["api_service_type"]
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          name?: string
+          service?: Database["public"]["Enums"]["api_service_type"]
+          url?: string
         }
         Relationships: []
       }
@@ -187,7 +214,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      api_service_type:
+        | "openai"
+        | "perplexity"
+        | "anthropic"
+        | "google"
+        | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -302,6 +334,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      api_service_type: [
+        "openai",
+        "perplexity",
+        "anthropic",
+        "google",
+        "custom",
+      ],
+    },
   },
 } as const
