@@ -3,7 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Item } from './ItemCard';
 import { Button } from '@/components/ui/button';
-import { Calendar, ExternalLink, PencilLine, Tag, Trash, X } from 'lucide-react';
+import { Calendar, ExternalLink, PencilLine, Tag, Trash, X, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 
@@ -37,6 +37,17 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
               alt={item.title} 
               className="w-full object-cover"
             />
+          </div>
+        )}
+        
+        {/* Display summary if available */}
+        {item.summary && (
+          <div className="bg-secondary/50 p-3 rounded-md mb-3">
+            <div className="flex items-center mb-1">
+              <FileText className="h-4 w-4 mr-2 text-mind-accent" />
+              <span className="text-sm font-medium text-mind-accent">Summary</span>
+            </div>
+            <p className="text-sm italic">{item.summary}</p>
           </div>
         )}
         

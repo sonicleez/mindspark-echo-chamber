@@ -17,7 +17,8 @@ export async function getItems(): Promise<Item[]> {
     imageUrl: item.image_url || undefined,
     url: item.url || undefined,
     tags: item.tags || [],
-    dateAdded: new Date(item.created_at)
+    dateAdded: new Date(item.created_at),
+    summary: item.summary || undefined
   }));
 }
 
@@ -37,7 +38,8 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
       image_url: item.imageUrl,
       url: item.url,
       tags: item.tags || [],
-      user_id: user.id // Add the user_id field
+      user_id: user.id,
+      summary: item.summary // Add summary field
     })
     .select()
     .single();
@@ -51,7 +53,8 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
     imageUrl: data.image_url || undefined,
     url: data.url || undefined,
     tags: data.tags || [],
-    dateAdded: new Date(data.created_at)
+    dateAdded: new Date(data.created_at),
+    summary: data.summary || undefined // Include summary in returned object
   };
 }
 
@@ -63,6 +66,7 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
   if (item.imageUrl !== undefined) updates.image_url = item.imageUrl;
   if (item.url !== undefined) updates.url = item.url;
   if (item.tags !== undefined) updates.tags = item.tags;
+  if (item.summary !== undefined) updates.summary = item.summary; // Add summary update
   
   const { data, error } = await supabase
     .from('items')
@@ -80,7 +84,8 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
     imageUrl: data.image_url || undefined,
     url: data.url || undefined,
     tags: data.tags || [],
-    dateAdded: new Date(data.created_at)
+    dateAdded: new Date(data.created_at),
+    summary: data.summary || undefined // Include summary in returned object
   };
 }
 
@@ -91,4 +96,26 @@ export async function deleteItem(id: string): Promise<void> {
     .eq('id', id);
   
   if (error) throw error;
+}
+
+export async function summarizeContent(content: string): Promise<string> {
+  if (!content || content.trim() === '') {
+    return '';
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('summarize-content', {
+      body: { content }
+    });
+
+    if (error) {
+      console.error('Error calling summarize-content function:', error);
+      throw error;
+    }
+
+    return data.summary || '';
+  } catch (error) {
+    console.error('Error summarizing content:', error);
+    throw error;
+  }
 }

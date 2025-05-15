@@ -3,3 +3,6 @@ project_id = "qkrmrlecuolwnayxbqbm"
 
 [functions.extract-metadata]
 verify_jwt = true
+
+[functions.summarize-content]
+verify_jwt = true

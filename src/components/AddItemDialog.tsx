@@ -9,6 +9,7 @@ import { Item } from './ItemCard';
 import { X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { summarizeContent } from '@/services/itemsService';
 
 interface AddItemDialogProps {
   isOpen: boolean;
@@ -24,6 +25,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
   const [tags, setTags] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExtractingMetadata, setIsExtractingMetadata] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summary, setSummary] = useState('');
 
   useEffect(() => {
     // Reset form when dialog opens
@@ -33,6 +36,10 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
       setImageUrl('');
       setDescription('');
       setTags('');
+      setSummary('');
+      setIsSubmitting(false);
+      setIsExtractingMetadata(false);
+      setIsSummarizing(false);
     }
   }, [isOpen]);
 
@@ -77,6 +84,25 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
     }
   };
 
+  const handleSummarize = async () => {
+    if (!description) {
+      toast.error('Please add content to summarize');
+      return;
+    }
+
+    setIsSummarizing(true);
+    try {
+      const summarizedText = await summarizeContent(description);
+      setSummary(summarizedText);
+      toast.success('Content summarized successfully');
+    } catch (error) {
+      console.error('Error summarizing content:', error);
+      toast.error('Failed to summarize content');
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -88,12 +114,24 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
     setIsSubmitting(true);
     
     try {
+      // If we have description but no summary, try to generate one
+      if (description && !summary && !url) {
+        try {
+          const summarizedText = await summarizeContent(description);
+          setSummary(summarizedText);
+        } catch (error) {
+          console.error('Auto-summarization failed:', error);
+          // Continue with submission even if summary fails
+        }
+      }
+
       const newItem: Omit<Item, 'id' | 'dateAdded'> = {
         title,
         url: url || undefined,
         imageUrl: imageUrl || undefined,
         description: description || undefined,
         tags: tags ? tags.split(',').map(tag => tag.trim()) : undefined,
+        summary: summary || undefined,
       };
       
       await onAddItem(newItem);
@@ -110,6 +148,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
     setImageUrl('');
     setDescription('');
     setTags('');
+    setSummary('');
     setIsSubmitting(false);
     onClose();
   };
@@ -197,7 +236,21 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="description">Description</Label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={handleSummarize}
+                disabled={!description || isSummarizing || isSubmitting}
+                className="h-8"
+              >
+                {isSummarizing ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : 'Summarize'}
+              </Button>
+            </div>
             <Textarea
               id="description"
               value={description}
@@ -207,6 +260,24 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               disabled={isSubmitting}
             />
           </div>
+
+          {summary && (
+            <div className="space-y-2">
+              <Label htmlFor="summary">Summary (200 chars)</Label>
+              <Textarea
+                id="summary"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="AI generated summary"
+                rows={2}
+                disabled={isSubmitting}
+                maxLength={200}
+              />
+              <div className="text-xs text-right text-gray-500">
+                {summary.length}/200 characters
+              </div>
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="tags">Tags (comma separated)</Label>
