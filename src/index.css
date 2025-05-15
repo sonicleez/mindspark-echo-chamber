@@ -107,6 +107,7 @@ body {
   @apply bg-[#121212] text-white;
 }
 
+/* Custom scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -123,3 +124,25 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-[#444];
 }
+
+/* Utility classes for the application */
+.url-text {
+  @apply break-all text-sm text-gray-300 hover:text-[#FF5733];
+}
+
+.mind-badge {
+  @apply bg-[#333] text-gray-300 hover:bg-[#444] border-none rounded-full px-3;
+}
+
+.mind-section-header {
+  @apply flex items-center mb-2;
+}
+
+.mind-section-title {
+  @apply text-sm text-gray-300 ml-1;
+}
+
+.mind-icon {
+  @apply h-4 w-4 text-gray-400;
+}
+

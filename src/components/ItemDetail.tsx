@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Item } from './ItemCard';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Calendar, ExternalLink, PencilLine, Tag, Trash, X, FileText } from 'luc
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ItemDetailProps {
   item: Item | null;
@@ -17,6 +18,8 @@ interface ItemDetailProps {
 }
 
 const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete, onEdit }) => {
+  const [note, setNote] = useState('');
+  
   if (!item) return null;
 
   const formatDate = (date: Date) => {
@@ -64,34 +67,42 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
         
         <div className="space-y-3">
           {item.url && (
-            <div className="flex items-center">
-              <ExternalLink className="h-4 w-4 mr-2 text-gray-400" />
-              <a 
-                href={item.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm text-gray-300 hover:text-[#FF5733] underline truncate"
-              >
-                {item.url}
-              </a>
+            <div className="flex items-start">
+              <ExternalLink className="h-4 w-4 mr-2 text-gray-400 mt-1 flex-shrink-0" />
+              <div className="flex flex-col">
+                <a 
+                  href={item.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-300 hover:text-[#FF5733] underline break-all"
+                >
+                  {item.url}
+                </a>
+                <span className="text-xs text-gray-500 mt-1">
+                  Saved on {formatDate(item.dateAdded)}
+                </span>
+              </div>
             </div>
           )}
           
-          <div className="flex items-center">
-            <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-            <span className="text-sm text-gray-300">
-              Saved on {formatDate(item.dateAdded)}
-            </span>
-          </div>
+          {!item.url && (
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+              <span className="text-sm text-gray-300">
+                Saved on {formatDate(item.dateAdded)}
+              </span>
+            </div>
+          )}
           
-          {item.tags && item.tags.length > 0 && (
-            <div>
-              <div className="flex items-center mb-2">
-                <Tag className="h-4 w-4 mr-1 text-gray-400" />
-                <span className="text-sm text-gray-300">MIND TAGS</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {item.tags.map((tag) => (
+          {/* Mind Tags Section */}
+          <div>
+            <div className="flex items-center mb-2">
+              <Tag className="h-4 w-4 mr-1 text-gray-400" />
+              <span className="text-sm text-gray-300">MIND TAGS</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {item.tags && item.tags.length > 0 ? (
+                item.tags.map((tag) => (
                   <Badge 
                     key={tag} 
                     variant="outline"
@@ -99,17 +110,19 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
                   >
                     {tag}
                   </Badge>
-                ))}
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  className="rounded-full bg-[#FF5733] hover:bg-[#FF5733]/80 text-white text-xs px-3 py-1 h-auto"
-                >
-                  + Add tag
-                </Button>
-              </div>
+                ))
+              ) : (
+                <span className="text-xs text-gray-500 italic">No tags yet</span>
+              )}
+              <Button 
+                size="sm" 
+                variant="ghost"
+                className="rounded-full bg-[#FF5733] hover:bg-[#FF5733]/80 text-white text-xs px-3 py-1 h-auto"
+              >
+                + Add tag
+              </Button>
             </div>
-          )}
+          </div>
           
           {/* Add Mind Notes section */}
           <div>
@@ -117,8 +130,13 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
               <FileText className="h-4 w-4 mr-1 text-gray-400" />
               <span className="text-sm text-gray-300">MIND NOTES</span>
             </div>
-            <div className="bg-[#333] rounded-md p-3">
-              <span className="text-sm text-gray-500 italic">Type here to add a note...</span>
+            <div className="bg-[#333] rounded-md p-1">
+              <Textarea
+                placeholder="Type here to add a note..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="bg-transparent border-none text-sm text-gray-300 placeholder:text-gray-500 min-h-[100px] focus-visible:ring-0 resize-none"
+              />
             </div>
           </div>
         </div>
