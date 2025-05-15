@@ -1,14 +1,9 @@
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.1";
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-// CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -19,89 +14,67 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
-    const { content, useOpenAiKey } = await req.json();
-    
-    if (!content) {
-      return new Response(JSON.stringify({ error: "Content is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const { content } = await req.json();
+
+    if (!content || content.trim() === '') {
+      return new Response(
+        JSON.stringify({ 
+          summary: '',
+          error: 'No content provided for summarization' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-    
-    let apiKey = Deno.env.get('OPENAI_API_KEY');
-    
-    // If useOpenAiKey is true, get the active API key from our database
-    if (useOpenAiKey) {
-      const { data: keyData, error: keyError } = await supabase
-        .from('api_keys')
-        .select('*')
-        .eq('service', 'openai')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (keyError) {
-        throw new Error('No active OpenAI API key found');
-      }
-      
-      apiKey = keyData.key;
-      
-      // Update last_used_at timestamp
-      await supabase
-        .from('api_keys')
-        .update({ last_used_at: new Date().toISOString() })
-        .eq('id', keyData.id);
-    }
-    
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "OpenAI API key not found" }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    // Call OpenAI to summarize the content
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+
+    console.log(`Summarizing content: ${content.substring(0, 50)}...`);
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: 'gpt-4o-mini',
         messages: [
-          {
-            role: "system",
-            content: "You are a summarization assistant. Summarize the provided content in a concise way."
+          { 
+            role: 'system', 
+            content: 'Summarize the following content in 200 characters or less. Focus on the most important points while maintaining clarity and coherence.' 
           },
-          {
-            role: "user",
-            content: `Summarize this content: ${content}. Keep the summary under 150 words.`
-          }
-        ]
+          { role: 'user', content }
+        ],
+        max_tokens: 200
       }),
     });
-    
+
     const data = await response.json();
     
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${data.error?.message || 'Unknown error'}`);
+    if (data.error) {
+      console.error('OpenAI API error:', data.error);
+      throw new Error(data.error.message || 'Error from OpenAI API');
     }
-    
+
     const summary = data.choices[0].message.content.trim();
     
-    return new Response(JSON.stringify({ summary }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-    
+    console.log(`Generated summary: ${summary}`);
+
+    return new Response(
+      JSON.stringify({ summary }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error("Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('Error in summarize-content function:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error.message || 'An unexpected error occurred during summarization',
+        summary: '' 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   }
 });

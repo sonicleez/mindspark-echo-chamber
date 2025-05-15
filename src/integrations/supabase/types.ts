@@ -9,73 +9,12 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      api_keys: {
-        Row: {
-          created_at: string
-          created_by: string
-          expires_at: string | null
-          id: string
-          is_active: boolean | null
-          key: string
-          last_used_at: string | null
-          name: string
-          service: Database["public"]["Enums"]["api_service_type"]
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          key: string
-          last_used_at?: string | null
-          name: string
-          service?: Database["public"]["Enums"]["api_service_type"]
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          key?: string
-          last_used_at?: string | null
-          name?: string
-          service?: Database["public"]["Enums"]["api_service_type"]
-        }
-        Relationships: []
-      }
-      api_services: {
-        Row: {
-          created_at: string
-          description: string
-          name: string
-          service: Database["public"]["Enums"]["api_service_type"]
-          url: string
-        }
-        Insert: {
-          created_at?: string
-          description: string
-          name: string
-          service: Database["public"]["Enums"]["api_service_type"]
-          url: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          name?: string
-          service?: Database["public"]["Enums"]["api_service_type"]
-          url?: string
-        }
-        Relationships: []
-      }
       items: {
         Row: {
           created_at: string
           description: string | null
           id: string
           image_url: string | null
-          space_id: string | null
           summary: string | null
           tags: string[] | null
           title: string
@@ -88,7 +27,6 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
-          space_id?: string | null
           summary?: string | null
           tags?: string[] | null
           title: string
@@ -101,7 +39,6 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
-          space_id?: string | null
           summary?: string | null
           tags?: string[] | null
           title?: string
@@ -109,22 +46,13 @@ export type Database = {
           url?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "items_space_id_fkey"
-            columns: ["space_id"]
-            isOneToOne: false
-            referencedRelation: "spaces"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           id: string
-          is_admin: boolean | null
           updated_at: string
           username: string | null
         }
@@ -132,7 +60,6 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id: string
-          is_admin?: boolean | null
           updated_at?: string
           username?: string | null
         }
@@ -140,69 +67,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id?: string
-          is_admin?: boolean | null
           updated_at?: string
           username?: string | null
-        }
-        Relationships: []
-      }
-      rive_animations: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          file_path: string
-          id: string
-          is_active: boolean | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          file_path: string
-          id?: string
-          is_active?: boolean | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          file_path?: string
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      spaces: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -214,12 +80,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      api_service_type:
-        | "openai"
-        | "perplexity"
-        | "anthropic"
-        | "google"
-        | "custom"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -334,14 +195,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      api_service_type: [
-        "openai",
-        "perplexity",
-        "anthropic",
-        "google",
-        "custom",
-      ],
-    },
+    Enums: {},
   },
 } as const

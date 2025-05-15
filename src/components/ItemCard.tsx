@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ExternalLink } from 'lucide-react';
@@ -12,7 +13,6 @@ export interface Item {
   tags?: string[];
   dateAdded: Date;
   summary?: string;
-  space_id?: string;
 }
 
 interface ItemCardProps {

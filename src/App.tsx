@@ -7,10 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
-import AdminPage from "./pages/Admin";
 import { AuthProvider } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
-import RequireAdmin from "./components/RequireAdmin";
 
 const queryClient = new QueryClient();
 
@@ -25,14 +23,9 @@ const App = () => (
             {/* Public routes */}
             <Route path="/auth" element={<Auth />} />
             
-            {/* Protected routes - require authentication */}
+            {/* Protected routes */}
             <Route element={<RequireAuth />}>
               <Route path="/" element={<Index />} />
-              
-              {/* Admin routes - require admin role */}
-              <Route element={<RequireAdmin />}>
-                <Route path="/admin" element={<AdminPage />} />
-              </Route>
             </Route>
             
             {/* Catch-all route */}
