@@ -23,6 +23,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
   const [imageUrl, setImageUrl] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
+  const [summary, setSummary] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExtractingMetadata, setIsExtractingMetadata] = useState(false);
 
@@ -32,6 +33,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
       setUrl(item.url || '');
       setImageUrl(item.imageUrl || '');
       setDescription(item.description || '');
+      setSummary(item.summary || '');
       setTags(item.tags ? item.tags.join(', ') : '');
     }
   }, [item]);
@@ -95,6 +97,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
         url: url || undefined,
         imageUrl: imageUrl || undefined,
         description: description || undefined,
+        summary: summary || undefined,
         tags: tags ? tags.split(',').map(tag => tag.trim()) : undefined,
       };
       
@@ -112,11 +115,11 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-[#1E1E24] text-white border-[#333]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-medium flex items-center justify-between">
+          <DialogTitle className="text-xl font-medium flex items-center justify-between text-white">
             Edit Item
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 text-white hover:bg-[#333]">
               <X className="h-4 w-4" />
             </Button>
           </DialogTitle>
@@ -125,7 +128,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
         {item && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="url">URL</Label>
+              <Label htmlFor="url" className="text-gray-300">URL</Label>
               <div className="flex gap-2">
                 <Input
                   id="url"
@@ -134,14 +137,14 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com"
                   disabled={isSubmitting}
-                  className="flex-1"
+                  className="flex-1 bg-[#333] border-[#444] text-white placeholder:text-gray-500"
                 />
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={extractMetadata}
                   disabled={!url || isExtractingMetadata || isSubmitting}
-                  className="shrink-0"
+                  className="shrink-0 bg-transparent border-[#444] text-white hover:bg-[#444]"
                 >
                   {isExtractingMetadata ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -151,7 +154,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title" className="text-gray-300">Title *</Label>
               <Input
                 id="title"
                 value={title}
@@ -159,11 +162,12 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
                 placeholder="Enter a title"
                 required
                 disabled={isSubmitting}
+                className="bg-[#333] border-[#444] text-white placeholder:text-gray-500"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
+              <Label htmlFor="imageUrl" className="text-gray-300">Image URL</Label>
               <Input
                 id="imageUrl"
                 type="url"
@@ -171,9 +175,10 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
                 onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://example.com/image.jpg"
                 disabled={isSubmitting}
+                className="bg-[#333] border-[#444] text-white placeholder:text-gray-500"
               />
               {imageUrl && (
-                <div className="mt-2 border rounded-md p-2 flex justify-center">
+                <div className="mt-2 border border-[#444] rounded-md p-2 flex justify-center">
                   <img 
                     src={imageUrl} 
                     alt="Preview" 
@@ -187,7 +192,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="text-gray-300">Description</Label>
               <Textarea
                 id="description"
                 value={description}
@@ -195,24 +200,43 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
                 placeholder="Add a description"
                 rows={3}
                 disabled={isSubmitting}
+                className="bg-[#333] border-[#444] text-white placeholder:text-gray-500 min-h-[100px]"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="tags">Tags (comma separated)</Label>
+              <Label htmlFor="summary" className="text-gray-300">TLDR (200 chars)</Label>
+              <Textarea
+                id="summary"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="Short summary of content"
+                rows={2}
+                disabled={isSubmitting}
+                maxLength={200}
+                className="bg-[#FF5733]/20 border-[#FF5733]/30 text-white placeholder:text-gray-500"
+              />
+              <div className="text-xs text-right text-gray-500">
+                {summary ? summary.length : 0}/200 characters
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="tags" className="text-gray-300">Tags (comma separated)</Label>
               <Input
                 id="tags"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="design, inspiration, article"
                 disabled={isSubmitting}
+                className="bg-[#333] border-[#444] text-white placeholder:text-gray-500"
               />
             </div>
             
             <div className="flex justify-end pt-4">
               <Button 
                 type="submit" 
-                className="bg-mind-accent hover:bg-mind-accent-hover text-white"
+                className="bg-[#FF5733] hover:bg-[#FF5733]/80 text-white"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Saving...' : 'Save Changes'}

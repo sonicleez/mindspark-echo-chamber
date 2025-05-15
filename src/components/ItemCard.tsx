@@ -22,13 +22,13 @@ interface ItemCardProps {
 const ItemCard: React.FC<ItemCardProps> = ({ item, onItemClick }) => {
   return (
     <Card
-      className="bg-secondary/50 hover:bg-secondary/70 transition-colors cursor-pointer"
+      className="bg-[#1E1E24] text-white hover:bg-[#2A2A30] transition-colors cursor-pointer border-[#333]"
       onClick={() => onItemClick(item)}
     >
       <CardContent className="p-4">
-        <h3 className="text-lg font-semibold mb-2 line-clamp-1">{item.title}</h3>
+        <h3 className="text-lg font-semibold mb-2 line-clamp-1 text-white">{item.title}</h3>
         {item.description && (
-          <p className="text-sm text-mind-text-secondary line-clamp-2">{item.description}</p>
+          <p className="text-sm text-gray-300 line-clamp-2">{item.description}</p>
         )}
         {item.imageUrl && (
           <img
@@ -40,12 +40,19 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, onItemClick }) => {
             }}
           />
         )}
+        {item.summary && !item.imageUrl && (
+          <div className="mt-2 p-2 bg-[#FF5733]/20 border border-[#FF5733]/30 rounded text-sm">
+            <span className="text-xs font-medium text-[#FF5733] block mb-1">TLDR</span>
+            <p className="text-gray-200 line-clamp-2">{item.summary}</p>
+          </div>
+        )}
         {item.url && (
           <a
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-mind-accent hover:text-mind-accent-hover underline flex items-center mt-2"
+            className="text-sm text-[#FF5733] hover:text-[#FF5733]/80 underline flex items-center mt-2"
+            onClick={(e) => e.stopPropagation()}
           >
             <ExternalLink className="h-4 w-4 mr-1" />
             <span>Visit</span>

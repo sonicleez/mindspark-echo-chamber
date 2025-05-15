@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, ExternalLink, PencilLine, Tag, Trash, X, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 interface ItemDetailProps {
   item: Item | null;
@@ -18,13 +19,17 @@ interface ItemDetailProps {
 const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete, onEdit }) => {
   if (!item) return null;
 
+  const formatDate = (date: Date) => {
+    return format(date, 'MMMM d, yyyy');
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl bg-[#1E1E24] border-[#333] text-white">
         <DialogHeader>
-          <DialogTitle className="text-xl font-medium flex items-center justify-between">
+          <DialogTitle className="text-xl font-medium flex items-center justify-between text-white">
             {item.title}
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-white hover:bg-[#333]">
               <X className="h-4 w-4" />
             </Button>
           </DialogTitle>
@@ -40,32 +45,32 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
           </div>
         )}
         
-        {/* Display summary if available */}
+        {/* Display summary if available with red background */}
         {item.summary && (
-          <div className="bg-secondary/50 p-3 rounded-md mb-3">
+          <div className="bg-[#FF5733]/20 p-3 rounded-md mb-3 border border-[#FF5733]/30">
             <div className="flex items-center mb-1">
-              <FileText className="h-4 w-4 mr-2 text-mind-accent" />
-              <span className="text-sm font-medium text-mind-accent">Summary</span>
+              <FileText className="h-4 w-4 mr-2 text-[#FF5733]" />
+              <span className="text-sm font-medium text-[#FF5733]">TLDR</span>
             </div>
-            <p className="text-sm italic">{item.summary}</p>
+            <p className="text-sm">{item.summary}</p>
           </div>
         )}
         
         {item.description && (
-          <p className="text-mind-text-secondary">{item.description}</p>
+          <p className="text-gray-300">{item.description}</p>
         )}
         
-        <Separator className="my-4" />
+        <Separator className="my-4 bg-gray-700" />
         
         <div className="space-y-3">
           {item.url && (
             <div className="flex items-center">
-              <ExternalLink className="h-4 w-4 mr-2 text-mind-text-secondary" />
+              <ExternalLink className="h-4 w-4 mr-2 text-gray-400" />
               <a 
                 href={item.url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-sm text-mind-text-secondary hover:text-mind-accent underline truncate"
+                className="text-sm text-gray-300 hover:text-[#FF5733] underline truncate"
               >
                 {item.url}
               </a>
@@ -73,25 +78,49 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
           )}
           
           <div className="flex items-center">
-            <Calendar className="h-4 w-4 mr-2 text-mind-text-secondary" />
-            <span className="text-sm text-mind-text-secondary">
-              Saved on {format(item.dateAdded, 'MMMM d, yyyy')}
+            <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+            <span className="text-sm text-gray-300">
+              Saved on {formatDate(item.dateAdded)}
             </span>
           </div>
           
           {item.tags && item.tags.length > 0 && (
-            <div className="flex items-center flex-wrap gap-2">
-              <Tag className="h-4 w-4 mr-1 text-mind-text-secondary" />
-              {item.tags.map((tag) => (
-                <span 
-                  key={tag} 
-                  className="text-xs px-2 py-1 bg-secondary text-mind-text-secondary rounded-full"
+            <div>
+              <div className="flex items-center mb-2">
+                <Tag className="h-4 w-4 mr-1 text-gray-400" />
+                <span className="text-sm text-gray-300">MIND TAGS</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {item.tags.map((tag) => (
+                  <Badge 
+                    key={tag} 
+                    variant="outline"
+                    className="bg-[#333] text-gray-300 hover:bg-[#444] border-none rounded-full px-3"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  className="rounded-full bg-[#FF5733] hover:bg-[#FF5733]/80 text-white text-xs px-3 py-1 h-auto"
                 >
-                  {tag}
-                </span>
-              ))}
+                  + Add tag
+                </Button>
+              </div>
             </div>
           )}
+          
+          {/* Add Mind Notes section */}
+          <div>
+            <div className="flex items-center mb-2">
+              <FileText className="h-4 w-4 mr-1 text-gray-400" />
+              <span className="text-sm text-gray-300">MIND NOTES</span>
+            </div>
+            <div className="bg-[#333] rounded-md p-3">
+              <span className="text-sm text-gray-500 italic">Type here to add a note...</span>
+            </div>
+          </div>
         </div>
         
         <div className="mt-6 flex justify-end gap-2">
@@ -100,7 +129,7 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
               variant="outline" 
               size="sm" 
               onClick={onEdit}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 bg-transparent text-white border-gray-600 hover:bg-[#333]"
             >
               <PencilLine className="h-4 w-4" />
               Edit
@@ -112,7 +141,7 @@ const ItemDetail: React.FC<ItemDetailProps> = ({ item, isOpen, onClose, onDelete
               variant="destructive" 
               size="sm" 
               onClick={onDelete}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 bg-[#FF5733] hover:bg-[#FF5733]/80"
             >
               <Trash className="h-4 w-4" />
               Delete

@@ -161,11 +161,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-[#1E1E24] text-white border-[#333]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-medium flex items-center justify-between">
+          <DialogTitle className="text-xl font-medium flex items-center justify-between text-white">
             Add New Item
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 text-white hover:bg-[#333]">
               <X className="h-4 w-4" />
             </Button>
           </DialogTitle>
@@ -173,7 +173,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="url">URL</Label>
+            <Label htmlFor="url" className="text-gray-300">URL</Label>
             <div className="flex gap-2">
               <Input
                 id="url"
@@ -183,14 +183,14 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
                 onBlur={handleUrlBlur}
                 placeholder="https://example.com"
                 disabled={isSubmitting}
-                className="flex-1"
+                className="flex-1 bg-[#333] border-[#444] text-white placeholder:text-gray-500"
               />
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={extractMetadata}
                 disabled={!url || isExtractingMetadata || isSubmitting}
-                className="shrink-0"
+                className="shrink-0 bg-transparent border-[#444] text-white hover:bg-[#444]"
               >
                 {isExtractingMetadata ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -200,7 +200,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="title" className="text-gray-300">Title *</Label>
             <Input
               id="title"
               value={title}
@@ -208,11 +208,12 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               placeholder="Enter a title"
               required
               disabled={isSubmitting}
+              className="bg-[#333] border-[#444] text-white placeholder:text-gray-500"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="imageUrl">Image URL</Label>
+            <Label htmlFor="imageUrl" className="text-gray-300">Image URL</Label>
             <Input
               id="imageUrl"
               type="url"
@@ -220,9 +221,10 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://example.com/image.jpg"
               disabled={isSubmitting}
+              className="bg-[#333] border-[#444] text-white placeholder:text-gray-500"
             />
             {imageUrl && (
-              <div className="mt-2 border rounded-md p-2 flex justify-center">
+              <div className="mt-2 border border-[#444] rounded-md p-2 flex justify-center">
                 <img 
                   src={imageUrl} 
                   alt="Preview" 
@@ -237,14 +239,14 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
           
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="text-gray-300">Description</Label>
               <Button 
                 type="button" 
                 variant="outline" 
                 size="sm"
                 onClick={handleSummarize}
                 disabled={!description || isSummarizing || isSubmitting}
-                className="h-8"
+                className="h-8 bg-transparent border-[#444] text-white hover:bg-[#444]"
               >
                 {isSummarizing ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -258,12 +260,13 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
               placeholder="Add a description"
               rows={3}
               disabled={isSubmitting}
+              className="bg-[#333] border-[#444] text-white placeholder:text-gray-500 min-h-[100px]"
             />
           </div>
 
           {summary && (
             <div className="space-y-2">
-              <Label htmlFor="summary">Summary (200 chars)</Label>
+              <Label htmlFor="summary" className="text-gray-300">TLDR (200 chars)</Label>
               <Textarea
                 id="summary"
                 value={summary}
@@ -272,6 +275,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
                 rows={2}
                 disabled={isSubmitting}
                 maxLength={200}
+                className="bg-[#FF5733]/20 border-[#FF5733]/30 text-white placeholder:text-gray-500"
               />
               <div className="text-xs text-right text-gray-500">
                 {summary.length}/200 characters
@@ -280,21 +284,22 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
           )}
           
           <div className="space-y-2">
-            <Label htmlFor="tags">Tags (comma separated)</Label>
+            <Label htmlFor="tags" className="text-gray-300">Tags (comma separated)</Label>
             <Input
               id="tags"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="design, inspiration, article"
               disabled={isSubmitting}
+              className="bg-[#333] border-[#444] text-white placeholder:text-gray-500"
             />
           </div>
           
           <div className="flex justify-end pt-4">
             <Button 
               type="submit" 
-              className="bg-mind-accent hover:bg-mind-accent-hover text-white"
               disabled={isSubmitting}
+              className="bg-[#FF5733] hover:bg-[#FF5733]/80 text-white"
             >
               {isSubmitting ? 'Adding...' : 'Add Item'}
             </Button>
