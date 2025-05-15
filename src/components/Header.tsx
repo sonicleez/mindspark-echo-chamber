@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import UserMenu from './UserMenu';
-import { useRive } from '@rive-app/react-canvas';
+import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,60 +14,34 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
-  const [animationPath, setAnimationPath] = React.useState('/animations/animation.riv');
+  // Use the specific animation file URL directly
+  const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747290270792_Addnew.riv';
   
-  // Fetch active animations from the database
-  const { data: animations } = useQuery({
-    queryKey: ['activeRiveAnimations'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rive_animations')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1);
-        
-      if (error) throw error;
-      return data || [];
-    },
-  });
-  
-  // Update animation path when animations data is loaded
-  React.useEffect(() => {
-    if (animations && animations.length > 0) {
-      const publicUrl = supabase.storage
-        .from('animations')
-        .getPublicUrl(animations[0].file_path).data.publicUrl;
-        
-      setAnimationPath(publicUrl);
-    }
-  }, [animations]);
-  
-  // Configure Rive with autoplay set to false so we can control it
+  // Use Rive with state machine for interactivity
   const { RiveComponent, rive } = useRive({
-    src: animationPath,
-    autoplay: false,
+    src: riveAnimationUrl,
     stateMachines: 'State Machine 1',
+    autoplay: true,
   });
+
+  // Create state machine inputs for hover and click interactions if they exist
+  const hoverInput = useStateMachineInput(rive, 'State Machine 1', 'hover', false);
+  const pressInput = useStateMachineInput(rive, 'State Machine 1', 'pressed', false);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
   };
 
-  // Handle the Add button click with animation
-  const handleAddClick = () => {
-    if (rive) {
-      // Play the animation first
-      rive.play();
-      
-      // Add a delay before calling onAddItem to allow animation to play
-      setTimeout(() => {
-        onAddItem();
-      }, 300);
-    } else {
-      // Fallback if rive isn't loaded
-      onAddItem();
+  // Handle the Add button interactions
+  const handleAddButtonClick = () => {
+    if (pressInput) {
+      pressInput.fire();
     }
+    
+    // Add a delay before calling onAddItem to allow animation to play
+    setTimeout(() => {
+      onAddItem();
+    }, 300);
   };
 
   return (
@@ -91,11 +65,15 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         
         <div className="flex items-center gap-2">
           <Button 
-            onClick={handleAddClick}
+            onClick={handleAddButtonClick}
             variant="ghost" 
             className="p-2 hover:bg-[#333] text-white flex items-center"
+            onMouseEnter={() => hoverInput?.value = true}
+            onMouseLeave={() => hoverInput?.value = false}
+            onMouseDown={() => pressInput?.value = true}
+            onMouseUp={() => pressInput?.value = false}
           >
-            <div className="h-5 w-5 flex items-center justify-center">
+            <div className="h-8 w-8 flex items-center justify-center">
               <RiveComponent />
             </div>
             <span className="ml-2 hidden sm:inline">Add New</span>
