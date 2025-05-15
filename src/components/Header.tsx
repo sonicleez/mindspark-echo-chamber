@@ -35,17 +35,20 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         const stateMachines = rive.stateMachineNames;
         
         if (stateMachines && stateMachines.includes('State Machine 1')) {
-          // Use the correct method to set inputs on state machines
-          if (isHovering) {
-            rive.setStateMachineInput('State Machine 1', 'hover', true);
-          } else {
-            rive.setStateMachineInput('State Machine 1', 'hover', false);
+          // Get the inputs for this state machine
+          const inputs = rive.stateMachineInputs('State Machine 1');
+          
+          // Find the hover and pressed inputs
+          const hoverInput = inputs.find(input => input.name === 'hover');
+          const pressedInput = inputs.find(input => input.name === 'pressed');
+          
+          // Set the values if inputs exist
+          if (hoverInput) {
+            rive.setBooleanState('State Machine 1', 'hover', isHovering);
           }
           
-          if (isPressed) {
-            rive.setStateMachineInput('State Machine 1', 'pressed', true);
-          } else {
-            rive.setStateMachineInput('State Machine 1', 'pressed', false);
+          if (pressedInput) {
+            rive.setBooleanState('State Machine 1', 'pressed', isPressed);
           }
         }
       } catch (error) {
