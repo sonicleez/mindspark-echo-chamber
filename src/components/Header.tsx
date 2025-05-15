@@ -44,12 +44,12 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
           
           // Set the values if inputs exist
           if (hoverInput) {
-            // Use fireState for boolean inputs
-            rive.fireState('State Machine 1', 'hover', isHovering);
+            // Use setBoolean for boolean inputs
+            rive.setBoolean('State Machine 1', 'hover', isHovering);
           }
           
           if (pressedInput) {
-            rive.fireState('State Machine 1', 'pressed', isPressed);
+            rive.setBoolean('State Machine 1', 'pressed', isPressed);
           }
         }
       } catch (error) {
