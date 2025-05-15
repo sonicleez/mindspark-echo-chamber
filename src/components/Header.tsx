@@ -16,8 +16,8 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   const [isHovering, setIsHovering] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   
-  // Use the animation file URL 
-  const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747292766881_Addnew1.riv';
+  // Use the new animation file URL 
+  const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747294148769_Addnew2.riv';
   
   // Use Rive without state machine inputs initially to avoid errors
   const { RiveComponent, rive } = useRive({
@@ -45,11 +45,11 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
           // Set the values if inputs exist
           if (hoverInput) {
             // Use fireState for boolean inputs
-            rive.setBoolean('State Machine 1', 'hover', isHovering);
+            rive.fireState('State Machine 1', 'hover', isHovering);
           }
           
           if (pressedInput) {
-            rive.setBoolean('State Machine 1', 'pressed', isPressed);
+            rive.fireState('State Machine 1', 'pressed', isPressed);
           }
         }
       } catch (error) {
