@@ -10,10 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, Lock, UserCircle } from "lucide-react";
+import { User, Settings, LogOut, Shield, UserCircle } from "lucide-react";
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
+import AdminBadge from './AdminBadge';
 
 const UserMenu = () => {
   const { user, signOut } = useAuth();
@@ -71,7 +72,7 @@ const UserMenu = () => {
       } else {
         setIsCheckingRole(false);
       }
-    }, 800);
+    }, 1500);
     
     return () => {
       isMounted = false;
@@ -115,8 +116,11 @@ const UserMenu = () => {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link to="/admin">
-                <Lock className="mr-2 h-4 w-4" />
-                <span>Admin Dashboard</span>
+                <div className="flex items-center">
+                  <AdminBadge />
+                  <Shield className="mr-1 h-4 w-4" />
+                  <span>Admin Dashboard</span>
+                </div>
               </Link>
             </DropdownMenuItem>
           </>

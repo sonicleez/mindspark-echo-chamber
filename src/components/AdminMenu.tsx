@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminBadge from './AdminBadge';
 
@@ -55,7 +55,7 @@ const AdminMenu = () => {
           setIsLoading(false);
         }
       }
-    }, 800); // Longer delay to ensure user ID is available
+    }, 1500); // Increasing delay to ensure user ID is properly available
     
     return () => {
       isMounted = false;
@@ -64,11 +64,22 @@ const AdminMenu = () => {
   }, [user?.id]);
 
   if (isLoading) {
-    return null; // Don't show anything while loading
+    return (
+      <Button 
+        variant="outline"
+        className="flex items-center gap-1 bg-gray-100 text-gray-500 hover:bg-gray-200 border-gray-300"
+        disabled
+      >
+        <div className="flex items-center">
+          <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
+          <span>Loading...</span>
+        </div>
+      </Button>
+    ); 
   }
   
   if (!isAdmin) {
-    return null; // Don't show for non-admin users
+    return null;
   }
 
   return (
@@ -80,6 +91,7 @@ const AdminMenu = () => {
       <Link to="/admin">
         <div className="flex items-center">
           <AdminBadge />
+          <Shield className="mr-1 h-4 w-4" />
           <span>Admin Dashboard</span>
         </div>
       </Link>

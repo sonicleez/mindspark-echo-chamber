@@ -26,7 +26,7 @@ const AdminBadge: React.FC = () => {
   }, [rive]);
 
   return (
-    <div className="w-6 h-6">
+    <div className="w-6 h-6 mr-1">
       <RiveComponent />
     </div>
   );
