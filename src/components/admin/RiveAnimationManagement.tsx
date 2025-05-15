@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { useRive } from '@rive-app/react-canvas';
+import { useRive, RiveEventType } from '@rive-app/react-canvas';
 import {
   Table, TableHeader, TableRow, TableHead,
   TableBody, TableCell
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Spinner } from '@/components/ui/spinner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter
@@ -51,7 +52,7 @@ const RiveAnimationManagement: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  const { data: animations = [], isLoading } = useQuery({
+  const { data: animations = [], isLoading, error } = useQuery({
     queryKey: ['riveAnimations'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -62,6 +63,8 @@ const RiveAnimationManagement: React.FC = () => {
       if (error) throw error;
       return data || [];
     },
+    staleTime: 30000, // 30 seconds
+    retry: 2,
   });
   
   const uploadAnimation = useMutation({
@@ -69,27 +72,32 @@ const RiveAnimationManagement: React.FC = () => {
       if (!animationFile || !user) throw new Error('Missing file or user');
       setIsSubmitting(true);
       
-      // Upload file to storage
-      const fileName = `${Date.now()}_${animationFile.name}`;
-      const filePath = `${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('animations')
-        .upload(filePath, animationFile);
+      try {
+        // Upload file to storage
+        const fileName = `${Date.now()}_${animationFile.name}`;
+        const filePath = `${fileName}`;
         
-      if (uploadError) throw uploadError;
-      
-      // Create record in rive_animations table
-      const { error: insertError } = await supabase
-        .from('rive_animations')
-        .insert({
-          name: animationName,
-          description: animationDescription || null,
-          file_path: filePath,
-          created_by: user.id,
-        });
+        const { error: uploadError } = await supabase.storage
+          .from('animations')
+          .upload(filePath, animationFile);
+          
+        if (uploadError) throw uploadError;
         
-      if (insertError) throw insertError;
+        // Create record in rive_animations table
+        const { error: insertError } = await supabase
+          .from('rive_animations')
+          .insert({
+            name: animationName,
+            description: animationDescription || null,
+            file_path: filePath,
+            created_by: user.id,
+          });
+          
+        if (insertError) throw insertError;
+      } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['riveAnimations'] });
@@ -116,6 +124,7 @@ const RiveAnimationManagement: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['riveAnimations'] });
+      queryClient.invalidateQueries({ queryKey: ['activeRiveAnimations'] });
       toast.success('Animation status updated');
     },
     onError: (error) => {
@@ -142,6 +151,7 @@ const RiveAnimationManagement: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['riveAnimations'] });
+      queryClient.invalidateQueries({ queryKey: ['activeRiveAnimations'] });
       toast.success('Animation deleted');
     },
     onError: (error) => {
@@ -182,15 +192,19 @@ const RiveAnimationManagement: React.FC = () => {
     uploadAnimation.mutate();
   };
   
-  const getPublicUrl = (filePath: string) => {
+  const getPublicUrl = useCallback((filePath: string) => {
     return supabase.storage.from('animations').getPublicUrl(filePath).data.publicUrl;
-  };
+  }, []);
   
-  // Animation Preview Component
+  // Animation Preview Component - using error handling
   const AnimationPreview: React.FC<{ animation: RiveAnimation }> = ({ animation }) => {
+    const [loadError, setLoadError] = useState(false);
+    
     const { RiveComponent } = useRive({
       src: getPublicUrl(animation.file_path),
       autoplay: true,
+      onLoad: () => setLoadError(false),
+      onLoadError: () => setLoadError(true),
     });
     
     return (
@@ -200,7 +214,16 @@ const RiveAnimationManagement: React.FC = () => {
           <p className="text-sm text-gray-500 mb-4">{animation.description}</p>
         )}
         <div className="w-full h-96 bg-gray-100 rounded-md overflow-hidden">
-          <RiveComponent />
+          {loadError ? (
+            <div className="flex flex-col items-center justify-center h-full bg-red-50">
+              <p className="text-red-500 mb-2">Failed to load animation</p>
+              <Button variant="outline" size="sm" onClick={() => window.open(getPublicUrl(animation.file_path), '_blank')}>
+                Download File
+              </Button>
+            </div>
+          ) : (
+            <RiveComponent />
+          )}
         </div>
       </div>
     );
@@ -245,6 +268,22 @@ const RiveAnimationManagement: React.FC = () => {
       </Dialog>
     );
   };
+
+  if (error) {
+    return (
+      <div className="rounded-md bg-red-50 p-4 my-4">
+        <h3 className="text-lg font-medium text-red-800">Error loading animations</h3>
+        <p className="text-red-700 mt-2">There was a problem loading animations. Please try again later.</p>
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['riveAnimations'] })}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
   
   return (
     <div>
@@ -271,7 +310,9 @@ const RiveAnimationManagement: React.FC = () => {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center p-4">
-                  Loading...
+                  <div className="flex justify-center">
+                    <Spinner />
+                  </div>
                 </TableCell>
               </TableRow>
             ) : animations.length === 0 ? (
@@ -418,11 +459,14 @@ const RiveAnimationManagement: React.FC = () => {
                   resetForm();
                   setShowNewAnimationDialog(false);
                 }}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Uploading...' : 'Upload'}
+                {isSubmitting ? (
+                  <><Spinner size="sm" className="mr-2" /> Uploading...</>
+                ) : 'Upload'}
               </Button>
             </DialogFooter>
           </form>

@@ -1,9 +1,20 @@
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import UserManagement from '@/components/admin/UserManagement';
-import ApiKeyManagement from '@/components/admin/ApiKeyManagement';
-import RiveAnimationManagement from '@/components/admin/RiveAnimationManagement';
+import { Spinner } from '@/components/ui/spinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Lazy load the admin components for better performance
+const UserManagement = React.lazy(() => import('@/components/admin/UserManagement'));
+const ApiKeyManagement = React.lazy(() => import('@/components/admin/ApiKeyManagement'));
+const RiveAnimationManagement = React.lazy(() => import('@/components/admin/RiveAnimationManagement'));
+
+// Loading fallback component
+const TabLoader = () => (
+  <div className="flex justify-center items-center min-h-[300px]">
+    <Spinner size="lg" />
+  </div>
+);
 
 const AdminPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
@@ -19,17 +30,25 @@ const AdminPage: React.FC = () => {
           <TabsTrigger value="animations">Rive Animations</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="users" className="mt-6">
-          <UserManagement />
-        </TabsContent>
-        
-        <TabsContent value="apikeys" className="mt-6">
-          <ApiKeyManagement />
-        </TabsContent>
-        
-        <TabsContent value="animations" className="mt-6">
-          <RiveAnimationManagement />
-        </TabsContent>
+        <ErrorBoundary fallback={<div className="p-4 text-red-500">Something went wrong loading this tab.</div>}>
+          <TabsContent value="users" className="mt-6">
+            <Suspense fallback={<TabLoader />}>
+              <UserManagement />
+            </Suspense>
+          </TabsContent>
+          
+          <TabsContent value="apikeys" className="mt-6">
+            <Suspense fallback={<TabLoader />}>
+              <ApiKeyManagement />
+            </Suspense>
+          </TabsContent>
+          
+          <TabsContent value="animations" className="mt-6">
+            <Suspense fallback={<TabLoader />}>
+              <RiveAnimationManagement />
+            </Suspense>
+          </TabsContent>
+        </ErrorBoundary>
       </Tabs>
     </div>
   );
