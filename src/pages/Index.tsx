@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import ItemGrid from '@/components/ItemGrid';
@@ -31,10 +32,10 @@ const Index: React.FC = () => {
     mutationFn: addItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
-      toast.success('Item added successfully');
+      toast.success('Mục đã được thêm thành công');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to add item: ${error.message}`);
+      toast.error(`Không thể thêm mục: ${error.message}`);
     }
   });
 
@@ -43,10 +44,10 @@ const Index: React.FC = () => {
       updateItem(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
-      toast.success('Item updated successfully');
+      toast.success('Mục đã được cập nhật thành công');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to update item: ${error.message}`);
+      toast.error(`Không thể cập nhật mục: ${error.message}`);
     }
   });
 
@@ -54,10 +55,10 @@ const Index: React.FC = () => {
     mutationFn: deleteItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
-      toast.success('Item deleted successfully');
+      toast.success('Mục đã được xóa thành công');
     },
     onError: (error: Error) => {
-      toast.error(`Failed to delete item: ${error.message}`);
+      toast.error(`Không thể xóa mục: ${error.message}`);
     }
   });
 
@@ -128,36 +129,36 @@ const Index: React.FC = () => {
   };
   
   const handleDeleteItem = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
+    if (window.confirm('Bạn có chắc muốn xóa mục này không?')) {
       deleteItemMutation.mutate(id);
       setIsDetailOpen(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#121212]">
       <Header onAddItem={handleAddItem} onSearch={handleSearch} />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6">
+      <main className="flex-1 container mx-auto px-4 pt-20 pb-8">
+        <div className="pt-4 mb-6">
           <Filters currentFilter={currentFilter} onFilterChange={handleFilterChange} />
         </div>
         
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF5733]"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9b87f5]"></div>
           </div>
         ) : filteredItems.length > 0 ? (
           <ItemGrid items={filteredItems} onItemClick={handleItemClick} />
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-            <p className="text-lg">No items found</p>
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-[#1A1A1A]/30 rounded-lg border border-[#333] backdrop-blur-sm">
+            <p className="text-lg">Không tìm thấy mục nào</p>
             <Button 
               variant="link" 
               onClick={handleAddItem}
-              className="mt-2 text-[#FF5733] hover:text-[#FF5733]/80"
+              className="mt-2 text-[#9b87f5] hover:text-[#7E69AB]"
             >
-              Add a new item
+              Thêm mục mới
             </Button>
           </div>
         )}
