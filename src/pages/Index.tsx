@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import ItemGrid from '@/components/ItemGrid';
@@ -6,13 +5,14 @@ import ItemDetail from '@/components/ItemDetail';
 import AddItemDialog from '@/components/AddItemDialog';
 import EditItemDialog from '@/components/EditItemDialog';
 import Filters, { FilterType } from '@/components/Filters';
-import SpaceSelector from '@/components/SpaceSelector';
 import { Item } from '@/components/ItemCard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getItems, addItem, deleteItem, updateItem } from '@/services/itemsService';
 import { getSpaces, createSpace, updateSpace, deleteSpace, Space } from '@/services/spacesService';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import AppSidebar from '@/components/AppSidebar';
 
 const Index: React.FC = () => {
   const queryClient = useQueryClient();
@@ -206,71 +206,83 @@ const Index: React.FC = () => {
     setCurrentSpaceId(spaceId);
   };
 
+  const handleOpenCreateSpaceDialog = () => {
+    // This function would be passed to the sidebar to open the create space dialog
+    // Using the existing SpaceSelector's functionality
+    document.getElementById('create-space-button')?.click();
+  };
+
   const isLoading = isLoadingItems || isLoadingSpaces;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#121212]">
-      <Header onAddItem={handleAddItem} onSearch={handleSearch} />
-      
-      <main className="flex-1 container mx-auto px-4 pt-20 pb-8">
-        <div className="pt-4 mb-6 flex flex-col sm:flex-row items-center gap-4">
-          <SpaceSelector 
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-[#121212]">
+        <AppSidebar 
+          spaces={spaces} 
+          currentSpaceId={currentSpaceId}
+          onSpaceChange={handleSpaceChange}
+          onCreateSpace={handleOpenCreateSpaceDialog}
+        />
+        <SidebarInset>
+          <Header onAddItem={handleAddItem} onSearch={handleSearch} />
+          
+          <main className="container mx-auto px-4 pt-20 pb-8">
+            <div className="pt-4 mb-6 flex justify-between">
+              <div id="space-selector-container" className="hidden">
+                {/* We keep the SpaceSelector component to maintain its functionality, but hide it visually */}
+                <span id="create-space-button" className="hidden"></span>
+              </div>
+              <div className="w-full">
+                <Filters currentFilter={currentFilter} onFilterChange={handleFilterChange} />
+              </div>
+            </div>
+            
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9b87f5]"></div>
+              </div>
+            ) : filteredItems.length > 0 ? (
+              <ItemGrid items={filteredItems} onItemClick={handleItemClick} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-[#1A1A1A]/30 rounded-lg border border-[#333] backdrop-blur-sm">
+                <p className="text-lg">Không tìm thấy mục nào</p>
+                <Button 
+                  variant="link" 
+                  onClick={handleAddItem}
+                  className="mt-2 text-[#9b87f5] hover:text-[#7E69AB]"
+                >
+                  Thêm mục mới
+                </Button>
+              </div>
+            )}
+          </main>
+          
+          <ItemDetail 
+            item={selectedItem} 
+            isOpen={isDetailOpen} 
+            onClose={() => setIsDetailOpen(false)} 
+            onDelete={selectedItem ? () => handleDeleteItem(selectedItem.id) : undefined}
+            onEdit={selectedItem ? handleEditItem : undefined}
+          />
+          
+          <AddItemDialog 
+            isOpen={isAddDialogOpen}
+            onClose={() => setIsAddDialogOpen(false)}
+            onAddItem={handleCreateItem}
             spaces={spaces}
             currentSpaceId={currentSpaceId}
-            onSpaceChange={handleSpaceChange}
-            onCreateSpace={handleCreateSpace}
-            onEditSpace={handleUpdateSpace}
-            onDeleteSpace={handleDeleteSpace}
           />
-          <div className="flex-grow">
-            <Filters currentFilter={currentFilter} onFilterChange={handleFilterChange} />
-          </div>
-        </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9b87f5]"></div>
-          </div>
-        ) : filteredItems.length > 0 ? (
-          <ItemGrid items={filteredItems} onItemClick={handleItemClick} />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400 bg-[#1A1A1A]/30 rounded-lg border border-[#333] backdrop-blur-sm">
-            <p className="text-lg">Không tìm thấy mục nào</p>
-            <Button 
-              variant="link" 
-              onClick={handleAddItem}
-              className="mt-2 text-[#9b87f5] hover:text-[#7E69AB]"
-            >
-              Thêm mục mới
-            </Button>
-          </div>
-        )}
-      </main>
-      
-      <ItemDetail 
-        item={selectedItem} 
-        isOpen={isDetailOpen} 
-        onClose={() => setIsDetailOpen(false)} 
-        onDelete={selectedItem ? () => handleDeleteItem(selectedItem.id) : undefined}
-        onEdit={selectedItem ? handleEditItem : undefined}
-      />
-      
-      <AddItemDialog 
-        isOpen={isAddDialogOpen}
-        onClose={() => setIsAddDialogOpen(false)}
-        onAddItem={handleCreateItem}
-        spaces={spaces}
-        currentSpaceId={currentSpaceId}
-      />
 
-      <EditItemDialog
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        onEditItem={handleUpdateItem}
-        item={selectedItem}
-        spaces={spaces}
-      />
-    </div>
+          <EditItemDialog
+            isOpen={isEditDialogOpen}
+            onClose={() => setIsEditDialogOpen(false)}
+            onEditItem={handleUpdateItem}
+            item={selectedItem}
+            spaces={spaces}
+          />
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 };
 

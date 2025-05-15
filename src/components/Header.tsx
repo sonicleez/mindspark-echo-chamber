@@ -5,6 +5,7 @@ import { Search, Plus } from "lucide-react";
 import UserMenu from './UserMenu';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
+import { SidebarTrigger } from './ui/sidebar';
 
 interface HeaderProps {
   onAddItem: () => void;
@@ -26,8 +27,8 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   return (
     <header className="fixed top-0 left-0 right-0 z-10 w-full bg-[#1A1A1A]/90 backdrop-blur-md border-b border-[#333] py-3">
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <div className="flex items-center">
-          <h1 className="text-xl font-semibold text-white">mymind</h1>
+        <div className="flex items-center gap-2">
+          <SidebarTrigger />
         </div>
         
         <div className={`flex-1 max-w-xl mx-4 transition-all ${searchFocused ? 'scale-105' : ''}`}>
