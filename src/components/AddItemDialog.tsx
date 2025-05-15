@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -61,7 +60,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
 
       console.log('Extracted metadata response:', data);
 
-      // Always set the extracted data if available, regardless of whether fields are already filled
+      // Always set the extracted data if available
       if (data?.metadata) {
         if (data.metadata.title) {
           setTitle(data.metadata.title);
@@ -71,6 +70,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
           setDescription(data.metadata.description);
         }
 
+        // Make sure we're using the correct property name for image
         if (data.metadata.image) {
           setImageUrl(data.metadata.image);
         }
@@ -80,7 +80,12 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ isOpen, onClose, onAddIte
         }
       }
 
-      toast.success('Metadata extracted successfully');
+      // Display a warning if there was an extraction error but we still have some fallback metadata
+      if (data?.extractionError) {
+        toast.warning(`Metadata extracted with limitations: ${data.extractionError}`);
+      } else {
+        toast.success('Metadata extracted successfully');
+      }
     } catch (error) {
       console.error('Error extracting metadata:', error);
       toast.error('Failed to extract metadata');

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -66,6 +65,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
           setDescription(data.metadata.description);
         }
 
+        // Make sure we're using the correct property name for image
         if (data.metadata.image) {
           setImageUrl(data.metadata.image);
         }
@@ -75,7 +75,12 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ isOpen, onClose, onEdit
         }
       }
 
-      toast.success('Metadata extracted successfully');
+      // Display a warning if there was an extraction error but we still have some fallback metadata
+      if (data?.extractionError) {
+        toast.warning(`Metadata extracted with limitations: ${data.extractionError}`);
+      } else {
+        toast.success('Metadata extracted successfully');
+      }
     } catch (error) {
       console.error('Error extracting metadata:', error);
       toast.error('Failed to extract metadata');
