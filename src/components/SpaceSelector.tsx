@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Space } from '@/services/spacesService';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface SpaceSelectorProps {
   spaces: Space[];
@@ -38,6 +39,7 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceDescription, setNewSpaceDescription] = useState('');
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentSpace = currentSpaceId 
     ? spaces.find(space => space.id === currentSpaceId) 
@@ -45,24 +47,42 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
 
   const handleCreateSpace = async () => {
     if (newSpaceName.trim()) {
-      await onCreateSpace({
-        name: newSpaceName.trim(),
-        description: newSpaceDescription.trim() || undefined
-      });
-      setNewSpaceName('');
-      setNewSpaceDescription('');
-      setIsCreateDialogOpen(false);
+      try {
+        setIsSubmitting(true);
+        await onCreateSpace({
+          name: newSpaceName.trim(),
+          description: newSpaceDescription.trim() || undefined
+        });
+        setNewSpaceName('');
+        setNewSpaceDescription('');
+        setIsCreateDialogOpen(false);
+        toast.success("Space created successfully");
+      } catch (error) {
+        console.error("Error creating space:", error);
+        toast.error("Failed to create space");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
   const handleEditSpace = async () => {
     if (editingSpace && newSpaceName.trim()) {
-      await onEditSpace(editingSpace.id, {
-        name: newSpaceName.trim(),
-        description: newSpaceDescription.trim() || undefined
-      });
-      resetEditForm();
-      setIsEditDialogOpen(false);
+      try {
+        setIsSubmitting(true);
+        await onEditSpace(editingSpace.id, {
+          name: newSpaceName.trim(),
+          description: newSpaceDescription.trim() || undefined
+        });
+        resetEditForm();
+        setIsEditDialogOpen(false);
+        toast.success("Space updated successfully");
+      } catch (error) {
+        console.error("Error updating space:", error);
+        toast.error("Failed to update space");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -74,9 +94,13 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
     setIsDropdownOpen(false);
   };
 
-  const confirmDeleteSpace = (spaceId: string) => {
-    if (window.confirm('Are you sure you want to delete this space? Items in this space will be moved to "All Items".')) {
-      onDeleteSpace(spaceId);
+  const confirmDeleteSpace = async (spaceId: string) => {
+    try {
+      await onDeleteSpace(spaceId);
+      toast.success("Space deleted successfully");
+    } catch (error) {
+      console.error("Error deleting space:", error);
+      toast.error("Failed to delete space");
     }
     setIsDropdownOpen(false);
   };
@@ -176,7 +200,13 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
       </DropdownMenu>
       
       {/* Create Space Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+        if (!isSubmitting) setIsCreateDialogOpen(open);
+        if (!open) {
+          setNewSpaceName('');
+          setNewSpaceDescription('');
+        }
+      }}>
         <DialogContent className="bg-[#1E1E24] text-white border-[#333]">
           <DialogHeader>
             <DialogTitle>Create New Space</DialogTitle>
@@ -190,6 +220,7 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
                 value={newSpaceName}
                 onChange={(e) => setNewSpaceName(e.target.value)}
                 className="bg-[#2A2A30] border-[#333] text-white"
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -200,15 +231,25 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
                 value={newSpaceDescription}
                 onChange={(e) => setNewSpaceDescription(e.target.value)}
                 className="bg-[#2A2A30] border-[#333] text-white min-h-[80px]"
+                disabled={isSubmitting}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-[#333] text-white hover:bg-[#333]">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCreateDialogOpen(false)} 
+              className="border-[#333] text-white hover:bg-[#333]"
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button onClick={handleCreateSpace} className="bg-[#9b87f5] hover:bg-[#8a76e4] text-white">
-              Create
+            <Button 
+              onClick={handleCreateSpace} 
+              className="bg-[#9b87f5] hover:bg-[#8a76e4] text-white"
+              disabled={isSubmitting || !newSpaceName.trim()}
+            >
+              {isSubmitting ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -216,8 +257,10 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
       
       {/* Edit Space Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        setIsEditDialogOpen(open);
-        if (!open) resetEditForm();
+        if (!isSubmitting) {
+          setIsEditDialogOpen(open);
+          if (!open) resetEditForm();
+        }
       }}>
         <DialogContent className="bg-[#1E1E24] text-white border-[#333]">
           <DialogHeader>
@@ -232,6 +275,7 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
                 value={newSpaceName}
                 onChange={(e) => setNewSpaceName(e.target.value)}
                 className="bg-[#2A2A30] border-[#333] text-white"
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -242,15 +286,25 @@ const SpaceSelector: React.FC<SpaceSelectorProps> = ({
                 value={newSpaceDescription}
                 onChange={(e) => setNewSpaceDescription(e.target.value)}
                 className="bg-[#2A2A30] border-[#333] text-white min-h-[80px]"
+                disabled={isSubmitting}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-[#333] text-white hover:bg-[#333]">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditDialogOpen(false)} 
+              className="border-[#333] text-white hover:bg-[#333]"
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button onClick={handleEditSpace} className="bg-[#9b87f5] hover:bg-[#8a76e4] text-white">
-              Save Changes
+            <Button 
+              onClick={handleEditSpace} 
+              className="bg-[#9b87f5] hover:bg-[#8a76e4] text-white"
+              disabled={isSubmitting || !newSpaceName.trim()}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
