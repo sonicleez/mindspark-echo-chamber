@@ -1,12 +1,21 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
 
-export async function getItems(): Promise<Item[]> {
-  const { data, error } = await supabase
+export async function getItems(space_id?: string): Promise<Item[]> {
+  let query = supabase
     .from('items')
     .select('*')
     .order('created_at', { ascending: false });
+  
+  // If space_id is provided, filter items by that space
+  if (space_id) {
+    query = query.eq('space_id', space_id);
+  } else {
+    // Otherwise, show items without a space (null space_id)
+    query = query.is('space_id', null);
+  }
+  
+  const { data, error } = await query;
   
   if (error) throw error;
   
@@ -18,7 +27,8 @@ export async function getItems(): Promise<Item[]> {
     url: item.url || undefined,
     tags: item.tags || [],
     dateAdded: new Date(item.created_at),
-    summary: item.summary || undefined
+    summary: item.summary || undefined,
+    space_id: item.space_id || undefined
   }));
 }
 
@@ -39,7 +49,8 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
       url: item.url,
       tags: item.tags || [],
       user_id: user.id,
-      summary: item.summary
+      summary: item.summary,
+      space_id: item.space_id
     })
     .select()
     .single();
@@ -54,7 +65,8 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
     url: data.url || undefined,
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined
+    summary: data.summary || undefined,
+    space_id: data.space_id || undefined
   };
 }
 
@@ -67,6 +79,7 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
   if (item.url !== undefined) updates.url = item.url;
   if (item.tags !== undefined) updates.tags = item.tags;
   if (item.summary !== undefined) updates.summary = item.summary;
+  if (item.space_id !== undefined) updates.space_id = item.space_id;
   
   const { data, error } = await supabase
     .from('items')
@@ -85,7 +98,8 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
     url: data.url || undefined,
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined
+    summary: data.summary || undefined,
+    space_id: data.space_id || undefined
   };
 }
 

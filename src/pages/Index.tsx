@@ -6,20 +6,18 @@ import ItemDetail from '@/components/ItemDetail';
 import AddItemDialog from '@/components/AddItemDialog';
 import EditItemDialog from '@/components/EditItemDialog';
 import Filters, { FilterType } from '@/components/Filters';
+import SpaceSelector from '@/components/SpaceSelector';
 import { Item } from '@/components/ItemCard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getItems, addItem, deleteItem, updateItem } from '@/services/itemsService';
+import { getSpaces, createSpace, updateSpace, deleteSpace, Space } from '@/services/spacesService';
 
 const Index: React.FC = () => {
   const queryClient = useQueryClient();
   
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ['items'],
-    queryFn: getItems,
-  });
-  
+  // State
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -27,11 +25,24 @@ const Index: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentFilter, setCurrentFilter] = useState<FilterType>('all');
+  const [currentSpaceId, setCurrentSpaceId] = useState<string | null>(null);
 
+  // Queries
+  const { data: spaces = [], isLoading: isLoadingSpaces } = useQuery({
+    queryKey: ['spaces'],
+    queryFn: getSpaces,
+  });
+  
+  const { data: items = [], isLoading: isLoadingItems } = useQuery({
+    queryKey: ['items', currentSpaceId],
+    queryFn: () => getItems(currentSpaceId),
+  });
+  
+  // Mutations
   const addItemMutation = useMutation({
     mutationFn: addItem,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['items', currentSpaceId] });
       toast.success('Mục đã được thêm thành công');
     },
     onError: (error: Error) => {
@@ -59,6 +70,43 @@ const Index: React.FC = () => {
     },
     onError: (error: Error) => {
       toast.error(`Không thể xóa mục: ${error.message}`);
+    }
+  });
+
+  const createSpaceMutation = useMutation({
+    mutationFn: createSpace,
+    onSuccess: (newSpace) => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      setCurrentSpaceId(newSpace.id);
+      toast.success('Không gian đã được tạo thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể tạo không gian: ${error.message}`);
+    }
+  });
+
+  const updateSpaceMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Space, 'id' | 'created_at'>> }) => 
+      updateSpace(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      toast.success('Không gian đã được cập nhật thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể cập nhật không gian: ${error.message}`);
+    }
+  });
+
+  const deleteSpaceMutation = useMutation({
+    mutationFn: deleteSpace,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spaces'] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setCurrentSpaceId(null);
+      toast.success('Không gian đã được xóa thành công');
+    },
+    onError: (error: Error) => {
+      toast.error(`Không thể xóa không gian: ${error.message}`);
     }
   });
 
@@ -96,6 +144,7 @@ const Index: React.FC = () => {
     setFilteredItems(result);
   }, [items, searchQuery, currentFilter]);
 
+  // Event handlers
   const handleItemClick = (item: Item) => {
     setSelectedItem(item);
     setIsDetailOpen(true);
@@ -135,13 +184,41 @@ const Index: React.FC = () => {
     }
   };
 
+  const handleCreateSpace = async (spaceData: { name: string; description?: string }) => {
+    await createSpaceMutation.mutateAsync(spaceData);
+  };
+
+  const handleUpdateSpace = async (id: string, spaceData: { name: string; description?: string }) => {
+    await updateSpaceMutation.mutateAsync({ id, data: spaceData });
+  };
+
+  const handleDeleteSpace = async (id: string) => {
+    await deleteSpaceMutation.mutateAsync(id);
+  };
+
+  const handleSpaceChange = (spaceId: string | null) => {
+    setCurrentSpaceId(spaceId);
+  };
+
+  const isLoading = isLoadingItems || isLoadingSpaces;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#121212]">
       <Header onAddItem={handleAddItem} onSearch={handleSearch} />
       
       <main className="flex-1 container mx-auto px-4 pt-20 pb-8">
-        <div className="pt-4 mb-6">
-          <Filters currentFilter={currentFilter} onFilterChange={handleFilterChange} />
+        <div className="pt-4 mb-6 flex flex-col sm:flex-row items-center gap-4">
+          <SpaceSelector 
+            spaces={spaces}
+            currentSpaceId={currentSpaceId}
+            onSpaceChange={handleSpaceChange}
+            onCreateSpace={handleCreateSpace}
+            onEditSpace={handleUpdateSpace}
+            onDeleteSpace={handleDeleteSpace}
+          />
+          <div className="flex-grow">
+            <Filters currentFilter={currentFilter} onFilterChange={handleFilterChange} />
+          </div>
         </div>
         
         {isLoading ? (
@@ -176,6 +253,8 @@ const Index: React.FC = () => {
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onAddItem={handleCreateItem}
+        spaces={spaces}
+        currentSpaceId={currentSpaceId}
       />
 
       <EditItemDialog
@@ -183,6 +262,7 @@ const Index: React.FC = () => {
         onClose={() => setIsEditDialogOpen(false)}
         onEditItem={handleUpdateItem}
         item={selectedItem}
+        spaces={spaces}
       />
     </div>
   );

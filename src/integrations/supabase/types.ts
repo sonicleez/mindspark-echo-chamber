@@ -48,6 +48,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          space_id: string | null
           summary: string | null
           tags: string[] | null
           title: string
@@ -60,6 +61,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          space_id?: string | null
           summary?: string | null
           tags?: string[] | null
           title: string
@@ -72,6 +74,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          space_id?: string | null
           summary?: string | null
           tags?: string[] | null
           title?: string
@@ -79,7 +82,15 @@ export type Database = {
           url?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "items_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -138,6 +149,33 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      spaces: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
