@@ -18,7 +18,7 @@ export async function getItems(): Promise<Item[]> {
     url: item.url || undefined,
     tags: item.tags || [],
     dateAdded: new Date(item.created_at),
-    summary: item.summary || undefined // Handle the summary field, even if it doesn't exist in DB yet
+    summary: item.summary || undefined
   }));
 }
 
@@ -39,7 +39,7 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
       url: item.url,
       tags: item.tags || [],
       user_id: user.id,
-      summary: item.summary // Add summary field
+      summary: item.summary
     })
     .select()
     .single();
@@ -54,7 +54,7 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
     url: data.url || undefined,
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined // Handle the summary field
+    summary: data.summary || undefined
   };
 }
 
@@ -66,7 +66,7 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
   if (item.imageUrl !== undefined) updates.image_url = item.imageUrl;
   if (item.url !== undefined) updates.url = item.url;
   if (item.tags !== undefined) updates.tags = item.tags;
-  if (item.summary !== undefined) updates.summary = item.summary; // Add summary update
+  if (item.summary !== undefined) updates.summary = item.summary;
   
   const { data, error } = await supabase
     .from('items')
@@ -85,7 +85,7 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
     url: data.url || undefined,
     tags: data.tags || [],
     dateAdded: new Date(data.created_at),
-    summary: data.summary || undefined // Handle the summary field
+    summary: data.summary || undefined
   };
 }
 
