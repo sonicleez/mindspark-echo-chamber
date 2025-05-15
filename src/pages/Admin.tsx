@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 const UserManagement = React.lazy(() => import('@/components/admin/UserManagement'));
 const ApiKeyManagement = React.lazy(() => import('@/components/admin/ApiKeyManagement'));
 const APIServiceManagement = React.lazy(() => import('@/components/admin/APIServiceManagement'));
+const RiveAnimationManagement = React.lazy(() => import('@/components/admin/RiveAnimationManagement'));
 
 // Loading fallback component
 const TabLoader = () => (
@@ -24,10 +25,11 @@ const AdminPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
       
       <Tabs defaultValue="users" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="apikeys">API Keys</TabsTrigger>
           <TabsTrigger value="aiservices">AI Services</TabsTrigger>
+          <TabsTrigger value="rive">Rive Animations</TabsTrigger>
         </TabsList>
         
         <ErrorBoundary fallback={<div className="p-4 text-red-500">Something went wrong loading this tab.</div>}>
@@ -46,6 +48,12 @@ const AdminPage: React.FC = () => {
           <TabsContent value="aiservices" className="mt-6">
             <Suspense fallback={<TabLoader />}>
               <APIServiceManagement />
+            </Suspense>
+          </TabsContent>
+          
+          <TabsContent value="rive" className="mt-6">
+            <Suspense fallback={<TabLoader />}>
+              <RiveAnimationManagement />
             </Suspense>
           </TabsContent>
         </ErrorBoundary>

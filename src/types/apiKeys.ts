@@ -9,12 +9,13 @@ export interface ApiKeyConfig {
   is_active: boolean;
   created_at: string;
   last_used_at: string | null;
+  created_by: string;
+  expires_at?: string | null;
 }
 
 export interface ApiServiceConfig {
-  service: ApiServiceType;
+  id: string;
   name: string;
   description: string;
   url: string;
-  keys: ApiKeyConfig[];
 }

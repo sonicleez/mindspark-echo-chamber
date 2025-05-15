@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ApiServiceConfig, ApiServiceType, ApiKeyConfig } from '@/types/apiKeys';
+import { ApiKeyConfig } from '@/types/apiKeys';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,42 +36,78 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Copy, Key, Plus, Trash2, CheckCircle } from 'lucide-react';
 
+// Define service types
+type ServiceType = 'openai' | 'perplexity' | 'anthropic' | 'google' | 'custom';
+
+// Define services with their documentation URLs
+const serviceConfigs = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    description: 'GPT models and other AI services',
+    url: 'https://platform.openai.com/docs/api-reference'
+  },
+  {
+    id: 'perplexity',
+    name: 'Perplexity',
+    description: 'AI language models and search',
+    url: 'https://docs.perplexity.ai/'
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    description: 'Claude AI models',
+    url: 'https://docs.anthropic.com/claude/reference/getting-started-with-the-api'
+  },
+  {
+    id: 'google',
+    name: 'Google AI',
+    description: 'Gemini and other Google AI models',
+    url: 'https://ai.google.dev/docs'
+  }
+];
+
 const RiveAnimationManagement: React.FC = () => {
   const queryClient = useQueryClient();
-  const [selectedService, setSelectedService] = useState<ApiServiceType>('openai');
+  const [selectedService, setSelectedService] = useState<ServiceType>('openai');
   const [isAddKeyDialogOpen, setIsAddKeyDialogOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [newApiKey, setNewApiKey] = useState('');
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
 
-  // Fetch API services configuration
-  const { data: apiServices = [], isLoading } = useQuery({
-    queryKey: ['apiServices'],
+  // Fetch API keys grouped by service
+  const { data: keysByService = {}, isLoading } = useQuery({
+    queryKey: ['apiKeys'],
     queryFn: async () => {
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('api_services')
+      const { data: keysData, error } = await supabase
+        .from('api_keys')
         .select('*');
-
-      if (servicesError) throw servicesError;
+        
+      if (error) throw error;
       
-      // For each service, fetch its API keys
-      const servicesWithKeys = await Promise.all(
-        servicesData.map(async (service) => {
-          const { data: keysData, error: keysError } = await supabase
-            .from('api_keys')
-            .select('*')
-            .eq('service', service.service);
-            
-          if (keysError) throw keysError;
-          
-          return {
-            ...service,
-            keys: keysData || []
-          };
-        })
-      );
+      // Group keys by service type
+      const grouped: Record<string, ApiKeyConfig[]> = {};
       
-      return servicesWithKeys as ApiServiceConfig[];
+      // Initialize with empty arrays for each service
+      serviceConfigs.forEach(service => {
+        grouped[service.id] = [];
+      });
+      
+      // Add keys to their service groups
+      keysData.forEach((key: ApiKeyConfig) => {
+        // If the key has a service property and that service exists in our configs
+        if (key.service && grouped[key.service]) {
+          grouped[key.service].push(key);
+        } else if (key.service) {
+          // If service exists but is not in our predefined list
+          if (!grouped['custom']) {
+            grouped['custom'] = [];
+          }
+          grouped['custom'].push(key);
+        }
+      });
+      
+      return grouped;
     }
   });
 
@@ -87,7 +123,8 @@ const RiveAnimationManagement: React.FC = () => {
           name: newKeyName.trim(),
           key: newApiKey.trim(),
           service: selectedService,
-          is_active: true
+          is_active: true,
+          created_by: 'system' // This should ideally be the current user's ID
         })
         .select();
         
@@ -95,7 +132,7 @@ const RiveAnimationManagement: React.FC = () => {
       return data[0];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['apiServices'] });
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
       setIsAddKeyDialogOpen(false);
       setNewKeyName('');
       setNewApiKey('');
@@ -116,7 +153,7 @@ const RiveAnimationManagement: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['apiServices'] });
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
       setKeyToDelete(null);
       toast.success('API key deleted successfully');
     },
@@ -126,25 +163,36 @@ const RiveAnimationManagement: React.FC = () => {
   });
 
   const setActiveKey = useMutation({
-    mutationFn: async ({ serviceType, keyId }: { serviceType: ApiServiceType, keyId: string }) => {
-      // First, update the service to set this key as active
-      const { error: serviceError } = await supabase
-        .from('api_services')
-        .update({ active_key_id: keyId })
-        .eq('service', serviceType);
+    mutationFn: async (keyId: string) => {
+      // First, set all keys of this service to inactive
+      const { data: keyData, error: keyError } = await supabase
+        .from('api_keys')
+        .select('service')
+        .eq('id', keyId)
+        .single();
         
-      if (serviceError) throw serviceError;
+      if (keyError) throw keyError;
       
-      // Then, ensure this key is marked as active
-      const { error: keyError } = await supabase
+      const service = keyData.service;
+      
+      // Update all keys for this service to inactive
+      const { error: updateError } = await supabase
+        .from('api_keys')
+        .update({ is_active: false })
+        .eq('service', service);
+        
+      if (updateError) throw updateError;
+      
+      // Set the selected key to active
+      const { error: activeError } = await supabase
         .from('api_keys')
         .update({ is_active: true })
         .eq('id', keyId);
         
-      if (keyError) throw keyError;
+      if (activeError) throw activeError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['apiServices'] });
+      queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
       toast.success('Active API key updated successfully');
     },
     onError: (error) => {
@@ -171,11 +219,12 @@ const RiveAnimationManagement: React.FC = () => {
     }
   };
 
-  const handleSetActiveKey = (serviceType: ApiServiceType, keyId: string) => {
-    setActiveKey.mutate({ serviceType, keyId });
+  const handleSetActiveKey = (keyId: string) => {
+    setActiveKey.mutate(keyId);
   };
 
-  const selectedServiceConfig = apiServices.find(s => s.service === selectedService);
+  // Get the currently selected service configuration
+  const selectedServiceConfig = serviceConfigs.find(s => s.id === selectedService);
 
   return (
     <div className="space-y-6">
@@ -186,10 +235,10 @@ const RiveAnimationManagement: React.FC = () => {
         </Button>
       </div>
       
-      <Tabs defaultValue="openai" value={selectedService} onValueChange={value => setSelectedService(value as ApiServiceType)}>
+      <Tabs defaultValue="openai" value={selectedService} onValueChange={value => setSelectedService(value as ServiceType)}>
         <TabsList className="mb-4">
-          {apiServices.map(service => (
-            <TabsTrigger key={service.service} value={service.service}>
+          {serviceConfigs.map(service => (
+            <TabsTrigger key={service.id} value={service.id}>
               {service.name}
             </TabsTrigger>
           ))}
@@ -199,8 +248,8 @@ const RiveAnimationManagement: React.FC = () => {
           <div className="p-4 text-center">Loading API key configurations...</div>
         ) : (
           <>
-            {apiServices.map(service => (
-              <TabsContent key={service.service} value={service.service} className="space-y-6">
+            {serviceConfigs.map(service => (
+              <TabsContent key={service.id} value={service.id} className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>{service.name}</CardTitle>
@@ -221,14 +270,14 @@ const RiveAnimationManagement: React.FC = () => {
                     
                     <div className="mt-6">
                       <h3 className="font-medium mb-2">Available API Keys</h3>
-                      {service.keys.length === 0 ? (
+                      {!keysByService[service.id] || keysByService[service.id].length === 0 ? (
                         <p className="text-gray-500">No API keys configured. Add a new key to start using {service.name} API.</p>
                       ) : (
                         <div className="space-y-3">
-                          {service.keys.map(key => (
+                          {keysByService[service.id].map(key => (
                             <div 
                               key={key.id} 
-                              className={`p-3 border rounded-lg flex items-center justify-between ${key.id === service.active_key_id ? 'bg-green-50 border-green-200' : ''}`}
+                              className={`p-3 border rounded-lg flex items-center justify-between ${key.is_active ? 'bg-green-50 border-green-200' : ''}`}
                             >
                               <div className="flex items-center space-x-3">
                                 <Key className="h-4 w-4 text-gray-500" />
@@ -238,16 +287,16 @@ const RiveAnimationManagement: React.FC = () => {
                                     Created: {new Date(key.created_at).toLocaleDateString()}
                                   </div>
                                 </div>
-                                {key.id === service.active_key_id && (
+                                {key.is_active && (
                                   <Badge className="bg-green-500">Active</Badge>
                                 )}
                               </div>
                               <div className="flex space-x-2">
-                                {key.id !== service.active_key_id && (
+                                {!key.is_active && (
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => handleSetActiveKey(service.service, key.id)}
+                                    onClick={() => handleSetActiveKey(key.id)}
                                   >
                                     <CheckCircle className="h-3.5 w-3.5 mr-1" />
                                     Set Active
