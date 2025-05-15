@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookmarkPlus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import UserMenu from './UserMenu';
+import { useRive } from '@rive-app/react-canvas';
 
 interface HeaderProps {
   onAddItem: () => void;
@@ -11,8 +12,23 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
+  const [isHovering, setIsHovering] = useState(false);
+  
+  const { RiveComponent, rive } = useRive({
+    src: 'https://rive.app/s/LevuX-GdcU_onEuVgwPn3g/embed?runtime=rive-renderer',
+    autoplay: true,
+    stateMachines: 'State Machine 1',
+  });
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
+  };
+
+  const handleAddClick = () => {
+    if (rive) {
+      rive.play();
+    }
+    onAddItem();
   };
 
   return (
@@ -36,11 +52,15 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         
         <div className="flex items-center gap-2">
           <Button 
-            onClick={onAddItem}
+            onClick={handleAddClick}
             variant="ghost" 
             className="p-2 hover:bg-[#333] text-white flex items-center"
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
           >
-            <BookmarkPlus className="h-5 w-5 text-[#FF5733]" />
+            <div className="h-5 w-5 mr-2">
+              <RiveComponent className="h-5 w-5" />
+            </div>
             <span className="ml-2 hidden sm:inline">Add New</span>
           </Button>
           <UserMenu />
