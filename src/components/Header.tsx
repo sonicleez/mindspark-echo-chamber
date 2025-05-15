@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import UserMenu from './UserMenu';
 import { useRive } from '@rive-app/react-canvas';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface HeaderProps {
   onAddItem: () => void;
@@ -12,9 +14,38 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
+  const [animationPath, setAnimationPath] = React.useState('/animations/animation.riv');
+  
+  // Fetch active animations from the database
+  const { data: animations } = useQuery({
+    queryKey: ['activeRiveAnimations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rive_animations')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  
+  // Update animation path when animations data is loaded
+  React.useEffect(() => {
+    if (animations && animations.length > 0) {
+      const publicUrl = supabase.storage
+        .from('animations')
+        .getPublicUrl(animations[0].file_path).data.publicUrl;
+        
+      setAnimationPath(publicUrl);
+    }
+  }, [animations]);
+  
   // Configure Rive with autoplay set to false so we can control it
   const { RiveComponent, rive } = useRive({
-    src: '/animations/animation.riv', // This will use the local file once uploaded
+    src: animationPath,
     autoplay: false,
     stateMachines: 'State Machine 1',
   });
