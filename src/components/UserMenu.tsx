@@ -29,10 +29,9 @@ const UserMenu = () => {
           .from('admin_roles')
           .select('*')
           .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
+          .eq('role', 'admin');
         
-        if (!error && data && isMounted) {
+        if (!error && data && data.length > 0 && isMounted) {
           setIsAdmin(true);
         }
       } catch (error) {
