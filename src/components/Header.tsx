@@ -31,15 +31,22 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   useEffect(() => {
     if (rive) {
       try {
-        // Get the state machine first, then set inputs on it
-        const stateMachine = rive.stateMachineInstance('State Machine 1');
+        // First check if the state machine exists using stateMachineNames
+        const stateMachines = rive.stateMachineNames;
         
-        if (stateMachine) {
-          // Safe way to set hover state
-          stateMachine.setBool('hover', isHovering);
+        if (stateMachines && stateMachines.includes('State Machine 1')) {
+          // Use the correct method to set inputs on state machines
+          if (isHovering) {
+            rive.setStateMachineInput('State Machine 1', 'hover', true);
+          } else {
+            rive.setStateMachineInput('State Machine 1', 'hover', false);
+          }
           
-          // Safe way to set press state
-          stateMachine.setBool('pressed', isPressed);
+          if (isPressed) {
+            rive.setStateMachineInput('State Machine 1', 'pressed', true);
+          } else {
+            rive.setStateMachineInput('State Machine 1', 'pressed', false);
+          }
         }
       } catch (error) {
         console.error('Error setting Rive animation inputs:', error);
