@@ -1,6 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
+import { Database } from '@/types/database';
+
+// Cast the supabase client to use our custom Database type
+const typedSupabase = supabase as unknown as ReturnType<typeof supabase.from<Database>>;
 
 export async function getItems(): Promise<Item[]> {
   const { data, error } = await supabase
@@ -46,6 +50,8 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
   
   if (error) throw error;
   
+  if (!data) throw new Error('Failed to retrieve created item');
+  
   return {
     id: data.id,
     title: data.title,
@@ -76,6 +82,8 @@ export async function updateItem(id: string, item: Partial<Omit<Item, 'id' | 'da
     .single();
   
   if (error) throw error;
+  
+  if (!data) throw new Error('Failed to retrieve updated item');
   
   return {
     id: data.id,
@@ -113,7 +121,7 @@ export async function summarizeContent(content: string): Promise<string> {
       throw error;
     }
 
-    return data.summary || '';
+    return data?.summary || '';
   } catch (error) {
     console.error('Error summarizing content:', error);
     throw error;
