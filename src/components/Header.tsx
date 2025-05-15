@@ -42,14 +42,20 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
           const hoverInput = inputs.find(input => input.name === 'hover');
           const pressedInput = inputs.find(input => input.name === 'pressed');
           
-          // Set the values if inputs exist
+          // Set the values if inputs exist - using the correct method for the Rive API
           if (hoverInput) {
-            // Use setBoolean for boolean inputs
-            rive.setBoolean('State Machine 1', 'hover', isHovering);
+            // Access the input object directly through the state machine
+            const stateMachine = rive.stateMachineInstance('State Machine 1');
+            if (stateMachine) {
+              stateMachine.setBool('hover', isHovering);
+            }
           }
           
           if (pressedInput) {
-            rive.setBoolean('State Machine 1', 'pressed', isPressed);
+            const stateMachine = rive.stateMachineInstance('State Machine 1');
+            if (stateMachine) {
+              stateMachine.setBool('pressed', isPressed);
+            }
           }
         }
       } catch (error) {
