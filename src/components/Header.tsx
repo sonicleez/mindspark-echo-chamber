@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import UserMenu from './UserMenu';
-import { useRive, useStateMachineInput } from '@rive-app/react-canvas';
+import { useRive } from '@rive-app/react-canvas';
 import { toast } from 'sonner';
 
 interface HeaderProps {
@@ -13,21 +13,38 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
   const [searchFocused, setSearchFocused] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
   
   // Use the animation file URL 
   const riveAnimationUrl = 'https://qkrmrlecuolwnayxbqbm.supabase.co/storage/v1/object/public/animations/1747292766881_Addnew1.riv';
   
-  // Use Rive with state machine for interactivity
+  // Use Rive without state machine inputs initially to avoid errors
   const { RiveComponent, rive } = useRive({
     src: riveAnimationUrl,
+    artboard: 'New Artboard',
     stateMachines: 'State Machine 1',
     autoplay: true,
-    artboard: 'New Artboard',
   });
-
-  // Create state machine inputs for hover and click interactions
-  const hoverInput = useStateMachineInput(rive, 'State Machine 1', 'hover');
-  const pressInput = useStateMachineInput(rive, 'State Machine 1', 'pressed');
+  
+  // Apply state inputs after rive is loaded
+  useEffect(() => {
+    if (rive) {
+      // Safe way to set hover state
+      if (isHovering) {
+        rive.setInputValue('State Machine 1', 'hover', true);
+      } else {
+        rive.setInputValue('State Machine 1', 'hover', false);
+      }
+      
+      // Safe way to set press state
+      if (isPressed) {
+        rive.setInputValue('State Machine 1', 'pressed', true);
+      } else {
+        rive.setInputValue('State Machine 1', 'pressed', false);
+      }
+    }
+  }, [rive, isHovering, isPressed]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearch(e.target.value);
@@ -35,12 +52,11 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
 
   // Handle the Add button interactions
   const handleAddButtonClick = () => {
-    if (pressInput) {
-      pressInput.fire();
-    }
+    setIsPressed(true);
     
     // Add a delay before calling onAddItem to allow animation to play
     setTimeout(() => {
+      setIsPressed(false);
       onAddItem();
       toast.success("Bắt đầu thêm mục mới");
     }, 300);
@@ -48,27 +64,20 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
 
   // Event handler functions for mouse interactions
   const handleMouseEnter = () => {
-    if (hoverInput) {
-      hoverInput.value = true;
-    }
+    setIsHovering(true);
   };
 
   const handleMouseLeave = () => {
-    if (hoverInput) {
-      hoverInput.value = false;
-    }
+    setIsHovering(false);
+    setIsPressed(false);
   };
 
   const handleMouseDown = () => {
-    if (pressInput) {
-      pressInput.value = true;
-    }
+    setIsPressed(true);
   };
 
   const handleMouseUp = () => {
-    if (pressInput) {
-      pressInput.value = false;
-    }
+    setIsPressed(false);
   };
 
   return (
@@ -94,7 +103,7 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
         
         <div className="flex items-center gap-3">
           <div 
-            className="cursor-pointer"
+            className="cursor-pointer relative"
             onClick={handleAddButtonClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -102,19 +111,12 @@ const Header: React.FC<HeaderProps> = ({ onAddItem, onSearch }) => {
             onMouseUp={handleMouseUp}
             style={{ 
               width: '110px', 
-              height: '40px', 
-              position: 'relative'
+              height: '40px',
             }}
           >
-            <RiveComponent 
-              style={{ 
-                position: 'absolute',
-                top: '0',
-                left: '0',
-                width: '100%',
-                height: '100%'
-              }}
-            />
+            <div className="absolute inset-0">
+              {rive && <RiveComponent />}
+            </div>
             <span 
               className="absolute inset-0 flex items-center justify-center text-white font-medium z-10 hidden sm:flex"
             >
