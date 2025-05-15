@@ -11,6 +11,7 @@ import { Item } from '@/components/ItemCard';
 import { summarizeContent } from '@/services/itemsService';
 import { toast } from 'sonner';
 import { Space } from '@/services/spacesService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AddItemDialogProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summary, setSummary] = useState('');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -117,6 +119,46 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     }
   };
 
+  const handleUrlBlur = async () => {
+    if (!url || url.trim() === '') return;
+    
+    // Only process if it's a valid URL
+    try {
+      new URL(url); // This will throw if the URL is invalid
+      
+      setIsLoadingMetadata(true);
+      toast.info("Fetching metadata from URL...");
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('extract-metadata', {
+          body: { url }
+        });
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Only set values that are empty
+        if (data) {
+          if (!title && data.title) setTitle(data.title);
+          if (!description && data.description) setDescription(data.description);
+          if (!imageUrl && data.imageUrl) setImageUrl(data.imageUrl);
+          if (tags.length === 0 && data.tags && data.tags.length > 0) setTags(data.tags);
+          if (data.summary) setSummary(data.summary);
+          
+          toast.success("URL metadata loaded successfully");
+        }
+      } catch (error) {
+        console.error('Error fetching metadata:', error);
+        toast.error("Failed to fetch metadata from URL");
+      }
+    } catch (error) {
+      // Invalid URL, do nothing
+    } finally {
+      setIsLoadingMetadata(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl bg-[#1E1E24] border-[#333] text-white max-h-[90vh] overflow-y-auto">
@@ -124,6 +166,26 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
           <DialogTitle className="text-xl text-white">Add New Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="url" className="text-gray-300">URL (Optional)</Label>
+            <div className="flex">
+              <Input 
+                id="url" 
+                value={url} 
+                onChange={(e) => setUrl(e.target.value)}
+                onBlur={handleUrlBlur}
+                placeholder="Enter URL"
+                className="bg-[#2A2A30] border-[#333] text-white flex-1"
+              />
+              {isLoadingMetadata && (
+                <div className="ml-2 flex items-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-400">Enter a URL and metadata will be automatically extracted</p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title" className="text-gray-300">Title</Label>
             <Input 
@@ -177,17 +239,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="url" className="text-gray-300">URL (Optional)</Label>
-            <Input 
-              id="url" 
-              value={url} 
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="Enter URL"
-              className="bg-[#2A2A30] border-[#333] text-white"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="imageUrl" className="text-gray-300">Image URL (Optional)</Label>
             <Input 
               id="imageUrl" 
@@ -196,6 +247,19 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
               placeholder="Enter image URL"
               className="bg-[#2A2A30] border-[#333] text-white"
             />
+            {imageUrl && (
+              <div className="mt-2 max-w-xs">
+                <img 
+                  src={imageUrl} 
+                  alt="Preview" 
+                  className="rounded-md w-full h-auto object-cover border border-[#333]"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    toast.error("Failed to load image preview");
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

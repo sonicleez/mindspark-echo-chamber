@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
 
@@ -40,17 +41,40 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
     throw new Error('You must be logged in to add items');
   }
   
+  let finalItem = {...item};
+  
+  // If URL is provided, extract metadata
+  if (item.url) {
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-metadata', {
+        body: { url: item.url }
+      });
+      
+      if (!error && data) {
+        // Only override these fields if they're empty or not provided
+        if (!finalItem.title) finalItem.title = data.title;
+        if (!finalItem.description) finalItem.description = data.description;
+        if (!finalItem.imageUrl) finalItem.imageUrl = data.imageUrl;
+        if (!finalItem.tags || finalItem.tags.length === 0) finalItem.tags = data.tags;
+        if (data.summary) finalItem.summary = data.summary;
+      }
+    } catch (error) {
+      console.error('Error extracting metadata:', error);
+      // Continue with item creation even if metadata extraction fails
+    }
+  }
+  
   const { data, error } = await supabase
     .from('items')
     .insert({
-      title: item.title,
-      description: item.description,
-      image_url: item.imageUrl,
-      url: item.url,
-      tags: item.tags || [],
+      title: finalItem.title,
+      description: finalItem.description,
+      image_url: finalItem.imageUrl,
+      url: finalItem.url,
+      tags: finalItem.tags || [],
       user_id: user.id,
-      summary: item.summary,
-      space_id: item.space_id
+      summary: finalItem.summary,
+      space_id: finalItem.space_id
     })
     .select()
     .single();
