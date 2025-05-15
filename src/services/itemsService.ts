@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Item } from '@/components/ItemCard';
+import { extractMetadataWithManagedKey, summarizeContentWithManagedKey } from './apiKeysService';
 
 export async function getItems(space_id?: string | null): Promise<Item[]> {
   let query = supabase
@@ -46,11 +46,9 @@ export async function addItem(item: Omit<Item, 'id' | 'dateAdded'>): Promise<Ite
   // If URL is provided, extract metadata
   if (item.url) {
     try {
-      const { data, error } = await supabase.functions.invoke('extract-metadata', {
-        body: { url: item.url }
-      });
+      const data = await extractMetadataWithManagedKey(item.url);
       
-      if (!error && data) {
+      if (data) {
         // Only override these fields if they're empty or not provided
         if (!finalItem.title) finalItem.title = data.title;
         if (!finalItem.description) finalItem.description = data.description;
@@ -142,16 +140,7 @@ export async function summarizeContent(content: string): Promise<string> {
   }
 
   try {
-    const { data, error } = await supabase.functions.invoke('summarize-content', {
-      body: { content }
-    });
-
-    if (error) {
-      console.error('Error calling summarize-content function:', error);
-      throw error;
-    }
-
-    return data.summary || '';
+    return await summarizeContentWithManagedKey(content);
   } catch (error) {
     console.error('Error summarizing content:', error);
     throw error;
