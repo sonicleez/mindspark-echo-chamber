@@ -4,9 +4,14 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminBadge from './AdminBadge';
+
+// Cache to store admin status checks
+const adminStatusCache = new Map<string, {isAdmin: boolean, timestamp: number}>();
+// Cache expiry time (5 minutes)
+const CACHE_EXPIRY = 5 * 60 * 1000; 
 
 const AdminMenu = () => {
   const { user } = useAuth();
@@ -16,23 +21,35 @@ const AdminMenu = () => {
   useEffect(() => {
     let isMounted = true;
     
-    if (!user?.id) {
-      if (isMounted) {
-        setIsLoading(false);
+    const checkAdminRole = async () => {
+      if (!user?.id) {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        return;
       }
-      return;
-    }
-    
-    // Use a small delay to ensure user object is fully loaded
-    const timer = setTimeout(async () => {
+      
       try {
         console.log('AdminMenu: Checking admin role for user:', user.id);
-        const { data, error } = await supabase
-          .from('admin_roles')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('role', 'admin');
-
+        
+        // Check cache first
+        const now = Date.now();
+        const cachedStatus = adminStatusCache.get(user.id);
+        
+        if (cachedStatus && (now - cachedStatus.timestamp < CACHE_EXPIRY)) {
+          console.log('AdminMenu: Using cached admin status');
+          if (isMounted) {
+            setIsAdmin(cachedStatus.isAdmin);
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        // Call the security definer function directly through RPC
+        const { data, error } = await supabase.rpc('check_if_user_is_admin', {
+          user_id: user.id
+        });
+        
         console.log('AdminMenu: Admin check response:', { data, error });
         
         if (error) {
@@ -44,8 +61,14 @@ const AdminMenu = () => {
           return;
         }
         
+        // Update cache
+        adminStatusCache.set(user.id, {
+          isAdmin: Boolean(data),
+          timestamp: now
+        });
+        
         if (isMounted) {
-          setIsAdmin(data && data.length > 0);
+          setIsAdmin(Boolean(data));
           setIsLoading(false);
         }
       } catch (error) {
@@ -55,7 +78,12 @@ const AdminMenu = () => {
           setIsLoading(false);
         }
       }
-    }, 1500); // Increasing delay to ensure user ID is properly available
+    };
+    
+    // Add a small delay to ensure user object is fully loaded
+    const timer = setTimeout(() => {
+      checkAdminRole();
+    }, 300);
     
     return () => {
       isMounted = false;

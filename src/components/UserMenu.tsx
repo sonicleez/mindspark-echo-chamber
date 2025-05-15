@@ -16,6 +16,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import AdminBadge from './AdminBadge';
 
+// Reuse the same admin status cache as other components
+// This would normally be in a shared file, but for simplicity we're duplicating the declaration
+const adminStatusCache = new Map<string, {isAdmin: boolean, timestamp: number}>();
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
 const UserMenu = () => {
   const { user, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -35,11 +40,23 @@ const UserMenu = () => {
       try {
         console.log('UserMenu: Checking admin role for user:', user.id);
         
-        const { data, error } = await supabase
-          .from('admin_roles')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('role', 'admin');
+        // Check cache first
+        const now = Date.now();
+        const cachedStatus = adminStatusCache.get(user.id);
+        
+        if (cachedStatus && (now - cachedStatus.timestamp < CACHE_EXPIRY)) {
+          console.log('UserMenu: Using cached admin status');
+          if (isMounted) {
+            setIsAdmin(cachedStatus.isAdmin);
+            setIsCheckingRole(false);
+          }
+          return;
+        }
+        
+        // Call the security definer function directly through RPC
+        const { data, error } = await supabase.rpc('check_if_user_is_admin', {
+          user_id: user.id
+        });
         
         console.log('UserMenu: Admin role check result:', { data, error });
         
@@ -52,8 +69,16 @@ const UserMenu = () => {
           return;
         }
         
+        const isUserAdmin = Boolean(data);
+        
+        // Update cache
+        adminStatusCache.set(user.id, {
+          isAdmin: isUserAdmin,
+          timestamp: now
+        });
+        
         if (isMounted) {
-          setIsAdmin(data && data.length > 0);
+          setIsAdmin(isUserAdmin);
           setIsCheckingRole(false);
         }
       } catch (error) {
@@ -65,14 +90,14 @@ const UserMenu = () => {
       }
     };
     
-    // Add a longer delay to ensure user is properly loaded
+    // Add a small delay to ensure user object is fully loaded
     const timer = setTimeout(() => {
       if (user?.id) {
         checkAdminRole();
       } else {
         setIsCheckingRole(false);
       }
-    }, 1500);
+    }, 300);
     
     return () => {
       isMounted = false;

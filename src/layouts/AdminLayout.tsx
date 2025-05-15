@@ -24,6 +24,11 @@ import {
   SidebarInset
 } from "@/components/ui/sidebar";
 
+// Reuse the same admin status cache as AdminMenu
+// This would normally be in a shared file, but for simplicity we're duplicating the declaration
+const adminStatusCache = new Map<string, {isAdmin: boolean, timestamp: number}>();
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
 const AdminLayout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +43,7 @@ const AdminLayout = () => {
         if (isMounted) {
           setIsAdmin(false);
           setIsLoading(false);
+          navigate('/');
         }
         return;
       }
@@ -45,11 +51,28 @@ const AdminLayout = () => {
       try {
         console.log('AdminLayout: Checking admin role for user:', user.id);
         
-        const { data, error } = await supabase
-          .from('admin_roles')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('role', 'admin');
+        // Check cache first
+        const now = Date.now();
+        const cachedStatus = adminStatusCache.get(user.id);
+        
+        if (cachedStatus && (now - cachedStatus.timestamp < CACHE_EXPIRY)) {
+          console.log('AdminLayout: Using cached admin status');
+          if (isMounted) {
+            setIsAdmin(cachedStatus.isAdmin);
+            setIsLoading(false);
+            
+            if (!cachedStatus.isAdmin) {
+              toast.error("You don't have permission to access the admin area");
+              navigate('/');
+            }
+          }
+          return;
+        }
+        
+        // Call the security definer function directly through RPC
+        const { data, error } = await supabase.rpc('check_if_user_is_admin', {
+          user_id: user.id
+        });
         
         console.log('AdminLayout: Admin role check result:', { data, error });
         
@@ -58,12 +81,21 @@ const AdminLayout = () => {
           if (isMounted) {
             setIsAdmin(false);
             setIsLoading(false);
+            toast.error("Error checking permissions");
+            navigate('/');
           }
           return;
         }
         
+        const isUserAdmin = Boolean(data);
+        
+        // Update cache
+        adminStatusCache.set(user.id, {
+          isAdmin: isUserAdmin,
+          timestamp: now
+        });
+        
         if (isMounted) {
-          const isUserAdmin = data && data.length > 0;
           setIsAdmin(isUserAdmin);
           setIsLoading(false);
           
@@ -78,19 +110,17 @@ const AdminLayout = () => {
         if (isMounted) {
           setIsAdmin(false);
           setIsLoading(false);
+          toast.error("Error checking permissions");
           navigate('/');
         }
       }
     };
     
-    // Add a delay to ensure user object is fully loaded
-    const timer = setTimeout(() => {
-      checkAdminRole();
-    }, 800);
+    // Check admin status immediately
+    checkAdminRole();
     
     return () => {
       isMounted = false;
-      clearTimeout(timer);
     };
   }, [user?.id, navigate]);
   
