@@ -81,24 +81,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        throw error;
+      }
+      
       console.log('Sign in successful');
+      return data;
     } catch (error: any) {
       console.error('Sign in error:', error);
-      toast.error(error.message || 'Error signing in');
+      
+      // Provide more user-friendly error messages
+      let errorMessage = error.message || 'Error signing in';
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please try again.';
+      }
+      
+      toast.error(errorMessage);
       throw error;
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
+      const { error, data } = await supabase.auth.signUp({ email, password });
       
-      toast.success('Signup successful! Please check your email to verify your account.');
+      if (error) {
+        console.error('Sign up error:', error);
+        throw error;
+      }
+      
+      if (data.user && !data.session) {
+        toast.success('Signup successful! Please check your email to verify your account.');
+      } else {
+        toast.success('Signup successful! You are now logged in.');
+      }
+      
+      return data;
     } catch (error: any) {
-      toast.error(error.message || 'Error signing up');
+      console.error('Sign up error:', error);
+      
+      // Provide more user-friendly error messages
+      let errorMessage = error.message || 'Error signing up';
+      if (error.message?.includes('User already registered')) {
+        errorMessage = 'An account with this email already exists.';
+      }
+      
+      toast.error(errorMessage);
       throw error;
     }
   };
@@ -108,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error: any) {
+      console.error('Sign out error:', error);
       toast.error(error.message || 'Error signing out');
       throw error;
     }
