@@ -8,6 +8,9 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import AdminConfigs from "./pages/AdminConfigs";
+import AdminUsers from "./pages/AdminUsers";
+import AdminLogs from "./pages/AdminLogs";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import { AuthProvider } from "./context/AuthContext";
@@ -36,7 +39,9 @@ const App = () => (
               {/* Admin routes with layout */}
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<Admin />} />
-                {/* Add more admin routes here */}
+                <Route path="/admin/configs" element={<AdminConfigs />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/logs" element={<AdminLogs />} />
               </Route>
             </Route>
             

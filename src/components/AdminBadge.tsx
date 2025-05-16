@@ -20,14 +20,16 @@ const AdminBadge: React.FC = () => {
       
       const handleMouseEnter = () => {
         if (rive && rive.stateMachineInputs) {
-          const input = rive.stateMachineInputs('State Machine 1')?.get('Hover');
+          const hoverInput = rive.stateMachineInputs('State Machine 1');
+          const input = hoverInput?.find(input => input.name === 'Hover');
           if (input) input.value = true;
         }
       };
       
       const handleMouseLeave = () => {
         if (rive && rive.stateMachineInputs) {
-          const input = rive.stateMachineInputs('State Machine 1')?.get('Hover');
+          const hoverInput = rive.stateMachineInputs('State Machine 1');
+          const input = hoverInput?.find(input => input.name === 'Hover');
           if (input) input.value = false;
         }
       };
