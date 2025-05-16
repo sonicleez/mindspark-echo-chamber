@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAdminStatus } from '@/hooks/useAdminStatus';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -16,6 +18,7 @@ const Settings = () => {
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const { isAdmin, isLoading } = useAdminStatus(user?.id);
 
   const handleUpdateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +71,33 @@ const Settings = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
+      
+      {isAdmin && (
+        <div className="mb-6">
+          <Card className="bg-amber-50 border-amber-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-amber-900 flex items-center">
+                <Shield className="mr-2 h-5 w-5" />
+                Admin Access
+              </CardTitle>
+              <CardDescription className="text-amber-800">
+                You have administrator privileges on this platform.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button 
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                asChild
+              >
+                <Link to="/admin">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Go to Admin Dashboard
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
       
       <Tabs defaultValue="profile">
         <TabsList className="mb-6">
