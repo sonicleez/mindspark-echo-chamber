@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -5,6 +6,7 @@ import { toast } from "sonner";
 import { LayoutDashboard, Settings, Users, FileText, Home } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarTrigger, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
 import { useAdminStatus } from '@/hooks/useAdminStatus';
+
 const AdminLayout = () => {
   const {
     user
@@ -14,6 +16,7 @@ const AdminLayout = () => {
     isAdmin,
     isLoading
   } = useAdminStatus(user?.id);
+  
   useEffect(() => {
     // Only redirect if we've completed the admin check and user is not an admin
     if (!isLoading && isAdmin === false) {
@@ -22,6 +25,7 @@ const AdminLayout = () => {
       navigate('/');
     }
   }, [isAdmin, isLoading, navigate]);
+  
   if (isLoading) {
     return <div className="flex min-h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -34,20 +38,21 @@ const AdminLayout = () => {
   }
 
   // User is admin, show the admin layout
-  return <SidebarProvider>
+  return (
+    <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <Sidebar variant="inset">
+        <Sidebar variant="inset" className="border-r border-gray-200 dark:border-gray-800">
           <SidebarHeader>
             <div className="flex items-center p-2">
               <LayoutDashboard className="h-6 w-6 mr-2 text-primary" />
-              <span className="text-lg font-semibold">Admin Panel</span>
+              <span className="text-lg font-semibold text-gray-900 dark:text-white">Admin Panel</span>
             </div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Dashboard" asChild>
-                  <Link to="/admin">
+                  <Link to="/admin" className="text-gray-800 dark:text-gray-200 hover:text-primary">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
                   </Link>
@@ -55,7 +60,7 @@ const AdminLayout = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Users" asChild>
-                  <Link to="/admin/users">
+                  <Link to="/admin/users" className="text-gray-800 dark:text-gray-200 hover:text-primary">
                     <Users className="h-4 w-4" />
                     <span>Users</span>
                   </Link>
@@ -63,7 +68,7 @@ const AdminLayout = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Configs" asChild>
-                  <Link to="/admin/configs">
+                  <Link to="/admin/configs" className="text-gray-800 dark:text-gray-200 hover:text-primary">
                     <Settings className="h-4 w-4" />
                     <span>Configurations</span>
                   </Link>
@@ -71,7 +76,7 @@ const AdminLayout = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Logs" asChild>
-                  <Link to="/admin/logs">
+                  <Link to="/admin/logs" className="text-gray-800 dark:text-gray-200 hover:text-primary">
                     <FileText className="h-4 w-4" />
                     <span>Usage Logs</span>
                   </Link>
@@ -83,7 +88,7 @@ const AdminLayout = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Return Home" asChild>
-                  <Link to="/">
+                  <Link to="/" className="text-gray-800 dark:text-gray-200 hover:text-primary">
                     <Home className="h-4 w-4" />
                     <span>Back to App</span>
                   </Link>
@@ -92,16 +97,18 @@ const AdminLayout = () => {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="bg-slate-400">
+        <SidebarInset className="bg-white dark:bg-gray-900">
           <div className="container mx-auto py-6 px-4">
             <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
               <SidebarTrigger />
             </div>
             <Outlet />
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>;
+    </SidebarProvider>
+  );
 };
+
 export default AdminLayout;
