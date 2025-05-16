@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminStatus } from '@/hooks/useAdminStatus';
@@ -16,10 +16,17 @@ const RequireAuth: React.FC<RequireAuthProps> = ({
 }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const { isAdmin, isLoading: isAdminLoading } = useAdminStatus(user?.id);
+  const { isAdmin, isLoading: isAdminLoading, refreshAdminStatus } = useAdminStatus(user?.id);
   
   // Check if we're on an admin route
   const isAdminRoute = location.pathname.startsWith('/admin');
+
+  // Refresh admin status when entering admin routes
+  useEffect(() => {
+    if (isAdminRoute && user?.id) {
+      refreshAdminStatus();
+    }
+  }, [isAdminRoute, user?.id]); 
 
   // Initialize Rive animation
   const { RiveComponent } = useRive({

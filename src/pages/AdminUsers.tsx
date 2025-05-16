@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -10,8 +9,10 @@ import { Search, UserPlus, Shield, ShieldX } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import AdminBadge from '@/components/AdminBadge';
 import { clearAdminStatusCache } from '@/hooks/useAdminStatus';
+import { useAuth } from '@/context/AuthContext';
 
 const AdminUsers = () => {
+  const { user } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [admins, setAdmins] = useState<Record<string, boolean>>({});
@@ -49,7 +50,7 @@ const AdminUsers = () => {
         setAdmins(adminMap);
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast('Failed to load user data');
+        toast.error('Failed to load user data');
       } finally {
         setIsLoading(false);
       }
@@ -75,10 +76,11 @@ const AdminUsers = () => {
           [userId]: false
         });
         
-        // Clear admin status cache for this user
+        // Clear admin status cache for this user and current user
         clearAdminStatusCache(userId);
+        if (user?.id) clearAdminStatusCache(user.id);
         
-        toast('Admin privileges removed');
+        toast.success('Admin privileges removed');
       } else {
         // Add admin role
         const { error } = await supabase
@@ -96,14 +98,15 @@ const AdminUsers = () => {
           [userId]: true
         });
         
-        // Clear admin status cache for this user
+        // Clear admin status cache for this user and current user
         clearAdminStatusCache(userId);
+        if (user?.id) clearAdminStatusCache(user.id);
         
-        toast('Admin privileges granted');
+        toast.success('Admin privileges granted');
       }
     } catch (error) {
       console.error('Error updating admin status:', error);
-      toast('Failed to update admin status');
+      toast.error('Failed to update admin status');
     }
   };
 

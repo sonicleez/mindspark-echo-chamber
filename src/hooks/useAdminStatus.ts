@@ -29,7 +29,7 @@ export const useAdminStatus = (userId?: string) => {
         const cachedStatus = adminStatusCache.get(userId);
         
         if (cachedStatus && (now - cachedStatus.timestamp < CACHE_EXPIRY)) {
-          console.log('useAdminStatus: Using cached admin status');
+          console.log('useAdminStatus: Using cached admin status for user:', userId);
           if (isMounted) {
             setIsAdmin(cachedStatus.isAdmin);
             setIsLoading(false);
@@ -83,11 +83,12 @@ export const useAdminStatus = (userId?: string) => {
     };
   }, [userId]);
 
-  return { isAdmin, isLoading, error };
+  return { isAdmin, isLoading, error, refreshAdminStatus: () => clearAdminStatusCache(userId) };
 };
 
 // Function to clear the admin status cache (useful for testing or after role changes)
 export const clearAdminStatusCache = (userId?: string) => {
+  console.log('Clearing admin status cache', userId ? `for user: ${userId}` : 'for all users');
   if (userId) {
     adminStatusCache.delete(userId);
   } else {

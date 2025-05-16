@@ -1,7 +1,9 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { clearAdminStatusCache } from '@/hooks/useAdminStatus';
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +11,8 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   isLoggedIn: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,6 +21,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signOut: async () => {},
   isLoggedIn: false,
+  signIn: async () => {},
+  signUp: async () => {}
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -78,12 +84,58 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // State will be updated by onAuthStateChange
+      toast.success("Logged in successfully");
+    } catch (error: any) {
+      console.error('Error signing in:', error);
+      throw error;
+    }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Show different messages based on email confirmation requirements
+      if (data.session) {
+        toast.success("Account created successfully!");
+      } else {
+        toast.success("Verification email sent. Please check your inbox.");
+      }
+      
+      // State will be updated by onAuthStateChange if session exists
+    } catch (error: any) {
+      console.error('Error signing up:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     session,
     loading,
     signOut,
     isLoggedIn: !!user,
+    signIn,
+    signUp
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
