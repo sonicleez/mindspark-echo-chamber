@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Shield } from 'lucide-react';
+import { AlertCircle, Shield, Settings as SettingsIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAdminStatus } from '@/hooks/useAdminStatus';
 
@@ -103,6 +103,7 @@ const Settings = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="profile">Profile Settings</TabsTrigger>
           <TabsTrigger value="security">Security Settings</TabsTrigger>
+          {isAdmin && <TabsTrigger value="admin">Admin Settings</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="profile">
@@ -176,6 +177,58 @@ const Settings = () => {
             </CardFooter>
           </Card>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="admin">
+            <Card>
+              <CardHeader>
+                <CardTitle>Administration Settings</CardTitle>
+                <CardDescription>Manage system configurations and administrator options.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Admin Access</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You currently have administrator access to the platform. Use the admin dashboard for complete system management.
+                  </p>
+                  
+                  <Button asChild variant="default">
+                    <Link to="/admin">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Go to Admin Dashboard
+                    </Link>
+                  </Button>
+                </div>
+                
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-amber-900 text-lg">Admin Responsibilities</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-amber-800">
+                      <li>User management and permissions</li>
+                      <li>Content moderation and approval</li>
+                      <li>System configuration and settings</li>
+                      <li>Security monitoring and updates</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline" asChild>
+                  <Link to="/admin/users">
+                    Manage Users
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/admin/settings">
+                    System Settings
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
