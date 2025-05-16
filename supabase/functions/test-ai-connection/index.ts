@@ -17,6 +17,8 @@ serve(async (req) => {
   try {
     // Parse request body
     const { provider, model, api_key } = await req.json();
+    
+    console.log(`Testing connection for provider: ${provider}, model: ${model}`);
 
     // Test the connection based on the provider
     let response;
@@ -36,6 +38,7 @@ serve(async (req) => {
       default:
         return new Response(
           JSON.stringify({ 
+            success: false,
             error: "Unsupported provider" 
           }),
           { 
@@ -44,6 +47,8 @@ serve(async (req) => {
           }
         );
     }
+
+    console.log(`Test result: ${JSON.stringify(response)}`);
 
     return new Response(
       JSON.stringify(response),

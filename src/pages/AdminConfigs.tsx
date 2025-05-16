@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -83,7 +84,14 @@ const AdminConfigs = () => {
           .order('is_active', { ascending: false });
           
         if (error) throw error;
-        setConfigs(data || []);
+        
+        // Make sure we have parsed additional_config for API keys
+        const processedData = data?.map(config => ({
+          ...config,
+          additional_config: config.additional_config || {}
+        }));
+        
+        setConfigs(processedData || []);
       } catch (error) {
         console.error('Error loading AI configs:', error);
         toast.error('Failed to load AI configurations');
@@ -230,22 +238,23 @@ const AdminConfigs = () => {
     const values = form.getValues();
     
     try {
-      // Create a basic test request to validate the API key
-      const testResponse = await fetch('/api/test-ai-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // Call the Supabase edge function directly instead of a local API
+      const { data: result, error } = await supabase.functions.invoke('test-ai-connection', {
         body: JSON.stringify({
           provider: values.provider,
           model: values.model,
           api_key: values.api_key,
-        }),
+        })
       });
       
-      const result = await testResponse.json();
+      if (error) {
+        console.error("Error invoking function:", error);
+        setTestStatus('error');
+        setTestMessage(error.message || "Connection failed. Please check your API key and settings.");
+        return;
+      }
       
-      if (testResponse.ok) {
+      if (result.success) {
         setTestStatus('success');
         setTestMessage("Connection successful! API key is valid.");
       } else {
@@ -528,6 +537,9 @@ const AdminConfigs = () => {
                         {...field} 
                       />
                     </FormControl>
+                    <FormDescription className="text-xs">
+                      This API key will be securely stored and used to authenticate with the {watchedProvider} service.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -551,7 +563,7 @@ const AdminConfigs = () => {
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                     <div className="space-y-0.5">
                       <FormLabel>Set as Active</FormLabel>
-                      <FormDescription className="text-xs text-muted-foreground">
+                      <FormDescription className="text-xs">
                         Make this the active AI configuration for all operations
                       </FormDescription>
                     </div>
