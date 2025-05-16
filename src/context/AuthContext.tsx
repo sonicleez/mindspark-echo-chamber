@@ -1,158 +1,92 @@
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { User, Session } from '@supabase/supabase-js';
+import { clearAdminStatusCache } from '@/hooks/useAdminStatus';
 
-interface AuthContextProps {
-  session: Session | null;
+interface AuthContextType {
   user: User | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  session: Session | null;
   loading: boolean;
+  signOut: () => Promise<void>;
+  isLoggedIn: boolean;
 }
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  loading: true,
+  signOut: async () => {},
+  isLoggedIn: false,
+});
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    let mounted = true;
-    
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        if (mounted) {
-          console.log('Auth state changed:', event);
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-        }
-        
-        // If user just signed in, redirect to home
-        if (event === 'SIGNED_IN' && mounted) {
-          console.log('User signed in, redirecting to home');
-          setTimeout(() => {
-            navigate('/');
-          }, 0);
-        }
-        
-        // If user just signed out, redirect to login
-        if (event === 'SIGNED_OUT' && mounted) {
-          console.log('User signed out, redirecting to auth');
-          setTimeout(() => {
-            navigate('/auth');
-          }, 0);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    const initializeAuth = async () => {
+    const fetchSession = async () => {
       try {
+        // Set up auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event, currentSession) => {
+            console.log('Auth state changed:', event, currentSession?.user?.id);
+            
+            // Clear admin status cache on auth state change
+            if (event === 'SIGNED_IN') {
+              clearAdminStatusCache();
+            } else if (event === 'SIGNED_OUT') {
+              clearAdminStatusCache();
+            }
+            
+            setSession(currentSession);
+            setUser(currentSession?.user ?? null);
+            setLoading(false);
+          }
+        );
+
+        // Check for existing session
         const { data } = await supabase.auth.getSession();
-        console.log('Current session:', data.session ? 'exists' : 'none');
-        
-        if (mounted) {
-          setSession(data.session);
-          setUser(data.session?.user ?? null);
-          setLoading(false);
-        }
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        setLoading(false);
+
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error('Error loading auth session:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+        console.error('Error setting up auth:', error);
+        setLoading(false);
       }
     };
-    
-    initializeAuth();
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  const signIn = async (email: string, password: string): Promise<void> => {
-    try {
-      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-      
-      if (error) {
-        console.error('Sign in error:', error);
-        throw error;
-      }
-      
-      console.log('Sign in successful');
-    } catch (error: any) {
-      console.error('Sign in error:', error);
-      
-      // Provide more user-friendly error messages
-      let errorMessage = error.message || 'Error signing in';
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Invalid email or password. Please try again.';
-      }
-      
-      toast.error(errorMessage);
-      throw error;
-    }
-  };
-
-  const signUp = async (email: string, password: string): Promise<void> => {
-    try {
-      const { error, data } = await supabase.auth.signUp({ email, password });
-      
-      if (error) {
-        console.error('Sign up error:', error);
-        throw error;
-      }
-      
-      if (data.user && !data.session) {
-        toast.success('Signup successful! Please check your email to verify your account.');
-      } else {
-        toast.success('Signup successful! You are now logged in.');
-      }
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      
-      // Provide more user-friendly error messages
-      let errorMessage = error.message || 'Error signing up';
-      if (error.message?.includes('User already registered')) {
-        errorMessage = 'An account with this email already exists.';
-      }
-      
-      toast.error(errorMessage);
-      throw error;
-    }
-  };
+    fetchSession();
+  }, []);
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (error: any) {
-      console.error('Sign out error:', error);
-      toast.error(error.message || 'Error signing out');
-      throw error;
+      // Clear cache before signing out
+      if (user?.id) {
+        clearAdminStatusCache(user.id);
+      }
+      
+      await supabase.auth.signOut();
+      
+      // We don't need to update state here since onAuthStateChange will handle it
+    } catch (error) {
+      console.error('Error signing out:', error);
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ session, user, signIn, signUp, signOut, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    session,
+    loading,
+    signOut,
+    isLoggedIn: !!user,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

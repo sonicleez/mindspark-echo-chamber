@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Shield, ShieldX } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import AdminBadge from '@/components/AdminBadge';
+import { clearAdminStatusCache } from '@/hooks/useAdminStatus';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -74,6 +75,9 @@ const AdminUsers = () => {
           [userId]: false
         });
         
+        // Clear admin status cache for this user
+        clearAdminStatusCache(userId);
+        
         toast('Admin privileges removed');
       } else {
         // Add admin role
@@ -91,6 +95,9 @@ const AdminUsers = () => {
           ...admins,
           [userId]: true
         });
+        
+        // Clear admin status cache for this user
+        clearAdminStatusCache(userId);
         
         toast('Admin privileges granted');
       }
