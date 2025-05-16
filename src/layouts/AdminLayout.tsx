@@ -1,34 +1,19 @@
-
 import React, { useEffect } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from "sonner";
-import {
-  LayoutDashboard,
-  Settings,
-  Users,
-  FileText,
-  Home
-} from "lucide-react";
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarTrigger,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarInset
-} from "@/components/ui/sidebar";
+import { LayoutDashboard, Settings, Users, FileText, Home } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarTrigger, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
 import { useAdminStatus } from '@/hooks/useAdminStatus';
-
 const AdminLayout = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const navigate = useNavigate();
-  const { isAdmin, isLoading } = useAdminStatus(user?.id);
-  
+  const {
+    isAdmin,
+    isLoading
+  } = useAdminStatus(user?.id);
   useEffect(() => {
     // Only redirect if we've completed the admin check and user is not an admin
     if (!isLoading && isAdmin === false) {
@@ -37,23 +22,19 @@ const AdminLayout = () => {
       navigate('/');
     }
   }, [isAdmin, isLoading, navigate]);
-  
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
+    return <div className="flex min-h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+      </div>;
   }
-  
+
   // If admin status is false, return null (the useEffect will handle redirection)
   if (isAdmin === false) {
     return null;
   }
 
   // User is admin, show the admin layout
-  return (
-    <SidebarProvider>
+  return <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <Sidebar variant="inset">
           <SidebarHeader>
@@ -111,7 +92,7 @@ const AdminLayout = () => {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
+        <SidebarInset className="bg-slate-400">
           <div className="container mx-auto py-6 px-4">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold">Admin Dashboard</h1>
@@ -121,8 +102,6 @@ const AdminLayout = () => {
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
+    </SidebarProvider>;
 };
-
 export default AdminLayout;
