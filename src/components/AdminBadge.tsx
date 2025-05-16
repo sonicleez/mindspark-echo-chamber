@@ -13,20 +13,41 @@ const AdminBadge: React.FC = () => {
     autoplay: true,
   });
 
-  // Trigger animation when component is mounted
+  // Handle hover interaction
   useEffect(() => {
     if (rive) {
-      rive.play();
-    }
-    return () => {
-      if (rive) {
-        rive.pause();
+      const container = document.getElementById('admin-badge-container');
+      
+      const handleMouseEnter = () => {
+        if (rive && rive.stateMachineInputs) {
+          const input = rive.stateMachineInputs('State Machine 1')?.get('Hover');
+          if (input) input.value = true;
+        }
+      };
+      
+      const handleMouseLeave = () => {
+        if (rive && rive.stateMachineInputs) {
+          const input = rive.stateMachineInputs('State Machine 1')?.get('Hover');
+          if (input) input.value = false;
+        }
+      };
+      
+      if (container) {
+        container.addEventListener('mouseenter', handleMouseEnter);
+        container.addEventListener('mouseleave', handleMouseLeave);
       }
-    };
+      
+      return () => {
+        if (container) {
+          container.removeEventListener('mouseenter', handleMouseEnter);
+          container.removeEventListener('mouseleave', handleMouseLeave);
+        }
+      };
+    }
   }, [rive]);
 
   return (
-    <div className="w-6 h-6 mr-1">
+    <div id="admin-badge-container" className="w-6 h-6 mr-1">
       <RiveComponent />
     </div>
   );

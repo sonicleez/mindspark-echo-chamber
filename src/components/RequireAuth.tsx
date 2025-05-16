@@ -1,8 +1,9 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useAdminStatus } from '@/hooks/useAdminStatus';
+import { useRive, Layout, Fit, Alignment } from 'rive-react';
 
 interface RequireAuthProps {
   redirectTo?: string;
@@ -20,12 +21,27 @@ const RequireAuth: React.FC<RequireAuthProps> = ({
   // Check if we're on an admin route
   const isAdminRoute = location.pathname.startsWith('/admin');
 
-  if (loading || (isAdminRoute && !isAdminLoading)) {
+  // Initialize Rive animation
+  const { RiveComponent } = useRive({
+    src: 'https://public.rive.app/community/runtime-files/2424-4662-simple-loading-animation.riv',
+    stateMachines: 'State Machine 1',
+    layout: new Layout({
+      fit: Fit.Contain,
+      alignment: Alignment.Center
+    }),
+    autoplay: true
+  });
+
+  if (loading || (isAdminRoute && isAdminLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Loading authentication...</p>
+          <div className="w-24 h-24">
+            <RiveComponent />
+          </div>
+          <p className="text-muted-foreground">
+            {isAdminRoute ? 'Verifying admin privileges...' : 'Loading authentication...'}
+          </p>
         </div>
       </div>
     );
