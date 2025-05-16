@@ -1,8 +1,7 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -28,21 +27,15 @@ import { useAdminStatus } from '@/hooks/useAdminStatus';
 const AdminLayout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { isAdmin, isLoading, error } = useAdminStatus(user?.id);
+  const { isAdmin, isLoading } = useAdminStatus(user?.id);
   
   useEffect(() => {
-    let isMounted = true;
-    
     // Only redirect if we've completed the admin check and user is not an admin
-    if (!isLoading && !isAdmin) {
+    if (!isLoading && isAdmin === false) {
       console.log('AdminLayout: User is not admin, redirecting to home');
       toast.error("You don't have permission to access the admin area");
       navigate('/');
     }
-    
-    return () => {
-      isMounted = false;
-    };
   }, [isAdmin, isLoading, navigate]);
   
   if (isLoading) {
@@ -53,10 +46,12 @@ const AdminLayout = () => {
     );
   }
   
+  // If admin status is false, return null (the useEffect will handle redirection)
   if (isAdmin === false) {
-    return null; // Will be redirected by the useEffect
+    return null;
   }
 
+  // User is admin, show the admin layout
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -87,7 +82,7 @@ const AdminLayout = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Configs" asChild>
-                  <Link to="/admin">
+                  <Link to="/admin/configs">
                     <Settings className="h-4 w-4" />
                     <span>Configurations</span>
                   </Link>
@@ -95,7 +90,7 @@ const AdminLayout = () => {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Logs" asChild>
-                  <Link to="/admin">
+                  <Link to="/admin/logs">
                     <FileText className="h-4 w-4" />
                     <span>Usage Logs</span>
                   </Link>

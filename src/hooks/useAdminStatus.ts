@@ -37,10 +37,14 @@ export const useAdminStatus = (userId?: string) => {
           return;
         }
         
+        console.log('useAdminStatus: Checking admin role for user:', userId);
+        
         // Call the security definer function directly through RPC
         const { data, error } = await supabase.rpc('check_if_user_is_admin', {
           user_id: userId
         });
+        
+        console.log('useAdminStatus: Admin check response:', { data, error });
         
         if (error) {
           console.error('useAdminStatus: Error checking admin role:', error);
