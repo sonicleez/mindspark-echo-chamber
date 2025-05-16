@@ -39,8 +39,8 @@ export const useAdminStatus = (userId?: string) => {
         
         console.log('useAdminStatus: Checking admin role for user:', userId);
         
-        // Call the security definer function directly through RPC
-        const { data, error } = await supabase.rpc('check_if_user_is_admin', {
+        // Call the NEW security definer function that avoids recursion
+        const { data, error } = await supabase.rpc('check_if_user_is_admin_secure', {
           user_id: userId
         });
         

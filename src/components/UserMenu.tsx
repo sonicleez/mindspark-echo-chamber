@@ -15,95 +15,11 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import AdminBadge from './AdminBadge';
-
-// Reuse the same admin status cache as other components
-// This would normally be in a shared file, but for simplicity we're duplicating the declaration
-const adminStatusCache = new Map<string, {isAdmin: boolean, timestamp: number}>();
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+import { useAdminStatus } from '@/hooks/useAdminStatus';
 
 const UserMenu = () => {
   const { user, signOut } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [isCheckingRole, setIsCheckingRole] = useState<boolean>(true);
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const checkAdminRole = async () => {
-      if (!user?.id) {
-        if (isMounted) {
-          setIsCheckingRole(false);
-        }
-        return;
-      }
-      
-      try {
-        console.log('UserMenu: Checking admin role for user:', user.id);
-        
-        // Check cache first
-        const now = Date.now();
-        const cachedStatus = adminStatusCache.get(user.id);
-        
-        if (cachedStatus && (now - cachedStatus.timestamp < CACHE_EXPIRY)) {
-          console.log('UserMenu: Using cached admin status');
-          if (isMounted) {
-            setIsAdmin(cachedStatus.isAdmin);
-            setIsCheckingRole(false);
-          }
-          return;
-        }
-        
-        // Call the security definer function directly through RPC
-        const { data, error } = await supabase.rpc('check_if_user_is_admin', {
-          user_id: user.id
-        });
-        
-        console.log('UserMenu: Admin role check result:', { data, error });
-        
-        if (error) {
-          console.error('UserMenu: Error checking admin role:', error);
-          if (isMounted) {
-            setIsAdmin(false);
-            setIsCheckingRole(false);
-          }
-          return;
-        }
-        
-        const isUserAdmin = Boolean(data);
-        
-        // Update cache
-        adminStatusCache.set(user.id, {
-          isAdmin: isUserAdmin,
-          timestamp: now
-        });
-        
-        if (isMounted) {
-          setIsAdmin(isUserAdmin);
-          setIsCheckingRole(false);
-        }
-      } catch (error) {
-        console.error('UserMenu: Error checking admin role:', error);
-        if (isMounted) {
-          setIsAdmin(false);
-          setIsCheckingRole(false);
-        }
-      }
-    };
-    
-    // Add a small delay to ensure user object is fully loaded
-    const timer = setTimeout(() => {
-      if (user?.id) {
-        checkAdminRole();
-      } else {
-        setIsCheckingRole(false);
-      }
-    }, 300);
-    
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, [user?.id]);
+  const { isAdmin, isLoading: isCheckingRole } = useAdminStatus(user?.id);
 
   if (!user) return null;
 

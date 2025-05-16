@@ -179,6 +179,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      check_if_user_is_admin_secure: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       ai_provider: "openai" | "gemini" | "openrouter"
