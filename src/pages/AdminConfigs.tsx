@@ -55,6 +55,7 @@ const AdminConfigs = () => {
   const [showDialog, setShowDialog] = useState<boolean>(false);
   const [editingConfig, setEditingConfig] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState<string>("");
@@ -78,22 +79,69 @@ const AdminConfigs = () => {
     const loadConfigs = async () => {
       try {
         setIsLoading(true);
+        setLoadError(null);
+        
+        console.log("Loading AI configurations...");
+        
         const { data, error } = await supabase
           .from('ai_configs')
           .select('*')
           .order('is_active', { ascending: false });
           
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error loading AI configs:', error);
+          setLoadError(`Failed to load configurations: ${error.message}`);
+          toast.error('Failed to load AI configurations');
+          throw error;
+        }
         
-        // Make sure we have parsed additional_config for API keys
-        const processedData = data?.map(config => ({
-          ...config,
-          additional_config: config.additional_config || {}
-        }));
+        if (!data) {
+          console.log("No data returned from Supabase");
+          setConfigs([]);
+          return;
+        }
         
-        setConfigs(processedData || []);
-      } catch (error) {
+        console.log(`Loaded ${data.length} configurations`);
+        
+        // Process the data with better error handling for additional_config
+        const processedData = data.map(config => {
+          try {
+            // Ensure additional_config is always a valid object
+            let additional_config = {};
+            
+            // Handle different scenarios for additional_config
+            if (config.additional_config) {
+              if (typeof config.additional_config === 'string') {
+                // If it's a string, try to parse it
+                try {
+                  additional_config = JSON.parse(config.additional_config);
+                } catch (parseError) {
+                  console.warn(`Failed to parse additional_config for config ${config.id}:`, parseError);
+                }
+              } else if (typeof config.additional_config === 'object') {
+                // If it's already an object, use it directly
+                additional_config = config.additional_config;
+              }
+            }
+            
+            return {
+              ...config,
+              additional_config: additional_config
+            };
+          } catch (processError) {
+            console.error(`Error processing config ${config.id}:`, processError);
+            // Return the config with a safe default for additional_config
+            return {
+              ...config,
+              additional_config: {}
+            };
+          }
+        });
+        
+        setConfigs(processedData);
+      } catch (error: any) {
         console.error('Error loading AI configs:', error);
+        setLoadError(`Failed to load configurations: ${error.message || 'Unknown error'}`);
         toast.error('Failed to load AI configurations');
       } finally {
         setIsLoading(false);
@@ -127,9 +175,9 @@ const AdminConfigs = () => {
       })));
       
       toast.success('AI configuration set as active successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error activating config:', error);
-      toast.error('Failed to update AI configuration');
+      toast.error(`Failed to update AI configuration: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -138,8 +186,17 @@ const AdminConfigs = () => {
     setTestMessage("");
     
     if (config) {
-      // Get API key from additional_config if it exists
-      const apiKey = config.additional_config?.api_key || '';
+      // Safely extract API key from additional_config
+      let apiKey = '';
+      
+      try {
+        if (config.additional_config && typeof config.additional_config === 'object') {
+          apiKey = config.additional_config.api_key || '';
+        }
+      } catch (error) {
+        console.warn("Could not extract API key from config:", error);
+        apiKey = '';
+      }
       
       form.reset({
         name: config.name,
@@ -175,7 +232,8 @@ const AdminConfigs = () => {
     try {
       // Prepare additional config with API key
       const additional_config = {
-        api_key: values.api_key
+        api_key: values.api_key,
+        has_api_key: !!values.api_key,
       };
       
       const configData = {
@@ -216,17 +274,19 @@ const AdminConfigs = () => {
         if (error) throw error;
 
         // Update local state with a sanitized version (no API key)
-        const newConfig = data[0];
-        newConfig.additional_config = { has_api_key: true };
-        setConfigs([...configs, newConfig]);
+        if (data && data.length > 0) {
+          const newConfig = data[0];
+          newConfig.additional_config = { has_api_key: true };
+          setConfigs([...configs, newConfig]);
+        }
         
         toast.success('AI configuration added successfully');
       }
       
       setShowDialog(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving config:', error);
-      toast.error(`Failed to ${editingConfig?.id ? 'update' : 'add'} AI configuration`);
+      toast.error(`Failed to ${editingConfig?.id ? 'update' : 'add'} AI configuration: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -238,14 +298,18 @@ const AdminConfigs = () => {
     const values = form.getValues();
     
     try {
-      // Call the Supabase edge function directly instead of a local API
+      console.log(`Testing connection for provider: ${values.provider}, model: ${values.model}`);
+      
+      // Call the Supabase edge function
       const { data: result, error } = await supabase.functions.invoke('test-ai-connection', {
-        body: JSON.stringify({
+        body: {
           provider: values.provider,
           model: values.model,
           api_key: values.api_key,
-        })
+        }
       });
+      
+      console.log("Edge function response:", result, error);
       
       if (error) {
         console.error("Error invoking function:", error);
@@ -254,17 +318,17 @@ const AdminConfigs = () => {
         return;
       }
       
-      if (result.success) {
+      if (result && result.success) {
         setTestStatus('success');
-        setTestMessage("Connection successful! API key is valid.");
+        setTestMessage(result.message || "Connection successful! API key is valid.");
       } else {
         setTestStatus('error');
-        setTestMessage(result.error || "Connection failed. Please check your API key and settings.");
+        setTestMessage(result?.error || "Connection failed. Please check your API key and settings.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error testing connection:', error);
       setTestStatus('error');
-      setTestMessage("Connection test failed. Please check your network connection.");
+      setTestMessage(error.message || "Connection test failed. Please check your network connection.");
     } finally {
       setIsTesting(false);
     }
@@ -284,9 +348,9 @@ const AdminConfigs = () => {
       // Update local state
       setConfigs(configs.filter(c => c.id !== id));
       toast.success('AI configuration deleted successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting config:', error);
-      toast.error('Failed to delete AI configuration');
+      toast.error(`Failed to delete AI configuration: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -301,10 +365,40 @@ const AdminConfigs = () => {
     }
   }, [watchedProvider, form]);
 
+  // Error display component
+  const ErrorDisplay = () => (
+    <div className="col-span-full p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+      <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+        <AlertCircle className="h-5 w-5" />
+        <h3 className="font-semibold">Failed to load configurations</h3>
+      </div>
+      {loadError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{loadError}</p>}
+      <Button 
+        variant="outline" 
+        className="mt-4 border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/30"
+        onClick={() => window.location.reload()}
+      >
+        Try Again
+      </Button>
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-muted-foreground">Loading AI configurations...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold">AI Configurations</h2>
+        </div>
+        <ErrorDisplay />
       </div>
     );
   }
@@ -317,7 +411,7 @@ const AdminConfigs = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {configs.map(config => (
+        {configs.length > 0 ? configs.map(config => (
           <Card 
             key={config.id} 
             className={config.is_active ? 'border-primary shadow-md' : ''}
@@ -350,9 +444,9 @@ const AdminConfigs = () => {
                   <div className="col-span-2">
                     <p className="font-medium">API Key:</p>
                     <p>
-                      {config.additional_config?.api_key || config.additional_config?.has_api_key ? 
+                      {(config.additional_config?.api_key || config.additional_config?.has_api_key) ? 
                         "●●●●●●●●●●●●●●●●" : 
-                        "Not configured"
+                        <span className="text-red-500 dark:text-red-400">Not configured</span>
                       }
                     </p>
                   </div>
@@ -383,9 +477,7 @@ const AdminConfigs = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
-        
-        {configs.length === 0 && (
+        )) : (
           <div className="col-span-full text-center py-8">
             <p className="text-muted-foreground">No configurations found</p>
             <Button 
@@ -546,9 +638,9 @@ const AdminConfigs = () => {
               />
               
               {testStatus !== 'idle' && (
-                <Alert variant={testStatus === 'success' ? "default" : "destructive"}>
+                <Alert variant={testStatus === 'success' ? "default" : "destructive"} className={testStatus === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : ''}>
                   {testStatus === 'success' ? (
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                   ) : (
                     <AlertCircle className="h-4 w-4" />
                   )}

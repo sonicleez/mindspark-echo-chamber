@@ -6,24 +6,45 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
+  console.log(`Request received: ${req.method} ${req.url}`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    console.log("Handling CORS preflight request");
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    });
   }
 
   try {
+    console.log("Parsing request body");
     // Parse request body
-    const { provider, model, api_key } = await req.json();
+    const requestData = await req.json();
+    const { provider, model, api_key } = requestData;
+    
+    if (!provider || !model || !api_key) {
+      console.error("Missing required parameters", { provider, model, hasApiKey: !!api_key });
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: "Missing required parameters: provider, model, and api_key are all required" 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
     
     console.log(`Testing connection for provider: ${provider}, model: ${model}`);
 
     // Test the connection based on the provider
     let response;
-    let success = false;
-    let message = "Connection failed";
 
     switch (provider) {
       case 'openai':
@@ -39,7 +60,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: false,
-            error: "Unsupported provider" 
+            error: `Unsupported provider: ${provider}` 
           }),
           { 
             status: 400, 
@@ -75,6 +96,7 @@ serve(async (req) => {
 // Test OpenAI connection
 async function testOpenAI(apiKey: string, model: string) {
   try {
+    console.log("Testing OpenAI connection");
     const response = await fetch('https://api.openai.com/v1/models', {
       method: 'GET',
       headers: {
@@ -85,9 +107,10 @@ async function testOpenAI(apiKey: string, model: string) {
 
     if (!response.ok) {
       const error = await response.json();
+      console.error("OpenAI API error:", error);
       return { 
         success: false, 
-        error: error.error?.message || "OpenAI API returned an error" 
+        error: error.error?.message || `OpenAI API returned status ${response.status}` 
       };
     }
 
@@ -101,6 +124,7 @@ async function testOpenAI(apiKey: string, model: string) {
       modelAvailable: isModelAvailable,
     };
   } catch (error) {
+    console.error("OpenAI connection error:", error);
     return { 
       success: false, 
       error: `OpenAI connection failed: ${error.message}` 
@@ -111,6 +135,7 @@ async function testOpenAI(apiKey: string, model: string) {
 // Test Google Gemini connection
 async function testGemini(apiKey: string, model: string) {
   try {
+    console.log("Testing Gemini connection");
     // Gemini doesn't have a simple model listing API, so we'll do a minimal request
     // We just validate the API key format for now
     if (!apiKey.startsWith('AI')) {
@@ -125,6 +150,7 @@ async function testGemini(apiKey: string, model: string) {
       message: "API key format is valid for Gemini" 
     };
   } catch (error) {
+    console.error("Gemini connection error:", error);
     return { 
       success: false, 
       error: `Gemini connection failed: ${error.message}` 
@@ -135,6 +161,7 @@ async function testGemini(apiKey: string, model: string) {
 // Test OpenRouter connection
 async function testOpenRouter(apiKey: string, model: string) {
   try {
+    console.log("Testing OpenRouter connection");
     const response = await fetch('https://openrouter.ai/api/v1/models', {
       method: 'GET',
       headers: {
@@ -146,9 +173,10 @@ async function testOpenRouter(apiKey: string, model: string) {
 
     if (!response.ok) {
       const error = await response.json();
+      console.error("OpenRouter API error:", error);
       return { 
         success: false, 
-        error: error.error?.message || "OpenRouter API returned an error" 
+        error: error.error?.message || `OpenRouter API returned status ${response.status}` 
       };
     }
 
@@ -163,6 +191,7 @@ async function testOpenRouter(apiKey: string, model: string) {
       modelAvailable: isModelAvailable,
     };
   } catch (error) {
+    console.error("OpenRouter connection error:", error);
     return { 
       success: false, 
       error: `OpenRouter connection failed: ${error.message}` 
